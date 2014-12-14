@@ -220,21 +220,18 @@ class Basis():
 
         #print Element symbol Name of the basis set  Alias names
         elem_symbol = param.elem_symbols.get(elem.atomic_nr) 
-        basis_name = self.basis_name
         f.write('#\n# ----------------- \n#\n')
-        f.write('%s %s \n'%(elem_symbol, basis_name))
+        f.write('%s %s \n'%(elem_symbol, self.basis_name))
         #print nset (repeat the following block of lines nset times)
-        nset=len(exp_unique)
-        f.write('%i\n'%(nset))
+        f.write('%i\n'%(len(exp_unique)))
 
-        indx_exp_unique = 0
         indx_aos = 0
         for i in range(len(exp_unique)):
 
             #collect the aos with the same exponents arrays
             aos_set = []
-            while aos[indx_aos].e == exp_unique[indx_exp_unique]:
-            #while set(aos[indx_aos].e).intersection(set(exp_unique[indx_exp_unique])):
+            while aos[indx_aos].e == exp_unique[i]:
+            #while set(aos[indx_aos].e).intersection(set(exp_unique[i])):
                 aos_set.append(aos[indx_aos])
                 indx_aos += 1
                 if (indx_aos==len(aos)): break #error
@@ -242,15 +239,14 @@ class Basis():
             #sort aos after l
             aos_set = sorted(aos_set, key=lambda AtomicOrbital: AtomicOrbital.l)
 
-            n=1; 
-            lmin=aos_set[0].l; 
-            lmax=aos_set[-1].l; 
-            nexp = len(exp_unique[indx_exp_unique]) 
-            ltmp = lmin
+            # collect min and max A.M.
+            lmin =  aos_set[0].l
+            lmax =  aos_set[-1].l
 
-            # sort coefs after A.M.
+            # sort coefs after A.M. (in c_l)
             c_l = []
             tmp = []
+            ltmp = lmin
             for j in range(lmax-lmin+1):
                 if aos_set[j].l != ltmp:
                     c_l.append(tmp)
@@ -262,20 +258,19 @@ class Basis():
             # get number of elements with each A.M.
             lens = [ len(c_l[k]) for k in range(lmax-lmin+1) ]
 
-            #print n lmin lmax nexp nshell(lmin) nshell(lmin+1) ... nshell(lmax-1) nshell(lmax)
-            #print exponent coeffs(lmin), ..., coeff(lmax)
-            f.write('%i %i %i %i '%(n,lmin,lmax,nexp))
+            #print n lmin lmax nexp nshell(lmin) nshell(lmin+1) ... nshell(lmax)
+            f.write('%i %i %i %i '\
+                    %(1, aos_set[0].l, aos_set[-1].l, len(exp_unique[i])))
             for ln in lens: 
                 f.write('%i '%ln)
             f.write('\n')
+            #print exponent coeffs(lmin), ..., coeff(lmax)
             for j in range(len(exp_unique[i])):
                 f.write('%f '%(exp_unique[i][j]))
                 for l in range(lmax-lmin+1):
                     for k in range(lens[l]):
                         f.write('%f '%c_l[l][k][j])
                 f.write('\n')
-
-            indx_exp_unique += 1
 
 basis = Basis('6-311G**')
 basis.read_dalton_basisfile('6-311G**')
