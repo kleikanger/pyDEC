@@ -3,7 +3,12 @@
 @brief
 '''
 
-elem_symbols = dict({\
+'''
+ex:
+>>elem_symbol_from_a.get(1)
+'H'
+'''
+elem_symbol_from_a = dict({\
         1:'H',\
         2:'He',\
         3:'Li',\
@@ -60,3 +65,10 @@ elem_symbols = dict({\
         54:'Cs',\
         55:'Ba',\
         }) #TODO fill out the missing elements.
+
+'''
+ex:
+>>elem_symbol_from_a.get('He')
+2
+'''
+elem_a_from_symbol = {v: k for k, v in elem_symbol_from_a.items()}

@@ -6,15 +6,15 @@
 @author Karl R. Leikanger.
 
 The orbitals are read from file and stored in the following format:
-    -chem_elems is an array of ChemElemBasis objects. Contains atomic number 
-    (chem_elems.atomic_nr) and an list of AtomicOrbital objects (chem_elems.ao), 
+    -chem_elems is an array of __ChemElemBasis objects. Contains atomic number 
+    (chem_elems.atomic_nr) and an list of __AtomicOrbital objects (chem_elems.ao), 
     -each of these have a list of coeffs (oa.c), a list of exponents (ao.e) and 
     a AM quantum number (ao.l) stored.  
 
 ex:
 filename = '6-311G**'
-basis = Basis(Basisname)
-basis.read_dalton_basisfile(filename)
+basis = Basis('basisname')
+basis.__read_dalton_basisfile(filename)
 
 '''
 import sys
@@ -24,75 +24,120 @@ from IO import ReadFile
 class Basis():
     '''
     @brief
-    @var chem_elems list of class ChemElemBasis objects. Basis for given atomic nr. 
+    @var chem_elems list of class __ChemElemBasis objects. Basis for given atomic nr. 
     @var chem_elems_indx dictionary {atomic_nr : index in chem_elems }
     @var basis_name Name of basis.
     @date 2014
     @author Karl R. Leikanger.
     '''
-
-    chem_elems = [] 
+    chem_elems = '' 
     chem_elems_indx = '' 
     basis_name = ''
+    infile_name = ''
+
+    def __init__(self, basis_name):
+        '''
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        self.basis_name = basis_name
+        self.chem_elems = []
     
-    class ChemElemBasis():
+    class __ChemElemBasis():
         '''
         @brief Container class. Stores basis info for a given element.
         @var atomic_nr Atomic number.
-        @var ao List of AtomicOrbital objects.
+        @var ao List of __AtomicOrbital objects.
         @date 2014
         @author Karl R. Leikanger.
         '''
         atomic_nr = '' 
-        ao = []
+        ao = ''
+        tags_permutations = ''
+
+        def __init__(self):
+            self.ao = []
+            self.tags_permutations = []
+
     
-    class AtomicOrbital():
+    class __AtomicOrbital():
         '''
         @brief Container class. Stores basis info for a given element.
         @var exp Exponents
         @var coef Contraction coefficients
         @var l Quantum number L.
+        @var tag To keep track of in which order that the orbitals where read.
         @date 2014
         @author Karl R. Leikanger.
         '''
-        e = [] 
+        e = []
         c = []
         l = ''
-        
-    def __init__(self, basis_name):
-        '''
-        @brief
-        @param basis_name Name of the basis.
-        @date 2014
-        @author Karl R. Leikanger.
-        '''
-        self.basis_name = basis_name
+        tag = ''
 
-    def read_dalton_basisfile(self, filename):
+        def __init__(self):
+            self.e = []
+            self.c = []
+
+    def read_basisfile(self, infile_name, basis_format):
         '''
-        @brief Read a basis input file of DALTON format.
-        @param filename Name of the inputfile.
+        @brief Read a basis input file.
+        @param infile_name Name of the inputfile.
+        @param basis_format Format of inputfile.
         @date 2014
         @author Karl R. Leikanger.
         '''
-        # get_words is a "functor". Returning 'words' of the lines 
-        # of filename, one line at a time.
+        self.infile_name = infile_name
+
+        if basis_format in ['DALTON', 'LSDALTON']:
+            self.__read_dalton_basisfile()
+        else:
+            print('Error: Basis input format <%s> not supported.'%basis_format)
+            sys.exit(-1)
+    
+    def print_basisfile(self, outputfile_name, basis_format):
+        '''
+        @brief Print basis basisfile.
+        @param outputfile_name Write basis to a file outputfile_name.
+        @param basis_format Format of outputfile.
+        @date 2014
+        @author Karl R. Leikanger.
+
+        '''
+
+        if basis_format == 'CP2K':
+            self.__print_cp2k_basisfile(outputfile_name)
+        else:
+            print('Error: Output basis format <%s> not supported.'%basis_format)
+            sys.exit(-1)
+
+    
+    def __read_dalton_basisfile(self):
+        '''
+        @brief Read a basis input file.
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+
+        # get_words is a "functor" which returns 'words' of the lines 
+        # of infile_name, one line at a time.
+        
+        print('Reading basis from:', self.infile_name)
         cmarkers = ['!', '$']
-        get_words = ReadFile(cmarkers, filename).get_words_of_line
+        get_words = ReadFile(self.infile_name, cmarkers).get_words_of_line
         
         l = -1
         elem = ''
         aos = ''
 
-        #iterating over lines in filename 
+        #iterating over lines in infile_name 
         for words in iter(get_words, ''):
             if words[0][0] == 'a' or words[0][0] == 'A': 
                 if l > -1:
                     self.chem_elems.append(elem)
-                    self.chem_elems[-1].ao = aos 
+                tag = 1
                 l = 0
-                aos = []
-                elem = self.ChemElemBasis()
+                elem = self.__ChemElemBasis()
                 elem.atomic_nr = int(words[1])
                 words = get_words()
             else:
@@ -116,20 +161,20 @@ class Basis():
 
             #set up self.chem_elems.ao, remove coeffs equal to 0
             for i in range(num_coef):
-                ao = self.AtomicOrbital()
+                ao = self.__AtomicOrbital()
                 ao.c = [c[j][i] for j in range(num_exp) if c[j][i] != 0.0]
                 ao.e = [e[j] for j in range(num_exp) if c[j][i] != 0.0]
                 ao.l = l
-                aos.append(ao)
+                ao.tag = tag; tag += 1
+                elem.ao.append(ao)
 
         self.chem_elems.append(elem)
-        self.chem_elems[-1].ao = aos 
 
         #sort and check for duplicates
-        self.sort_chem_elems()
+        self.__sort_chem_elems()
 
 
-    def sort_chem_elems(self):   
+    def __sort_chem_elems(self):   
         '''
         @brief Sort chem elem after atomic numbers and check for duplicates.
         @date 2014
@@ -149,24 +194,13 @@ class Basis():
         #Make sure that chem_elems ars sorted after atomic number 
         if (sorted(elemset) != elemset):
             self.chem_elems = sorted(self.chem_elems, \
-                    key=lambda ChemElemBasis: ChemElemBasis.atomic_nr)
+                    key=lambda __ChemElemBasis: __ChemElemBasis.atomic_nr)
 
         #set up dict { chem_elems.atomic_nr[i] : i }
         self.chem_elems_indx = \
                 dict(zip(sorted(elemset), range(len(elemset))))
 
-    def get_index_of_elem(self, atomic_nr):
-        '''
-        @brief return the index (in elemset) of the basis for atomic_nr.
-        @param atomic_nr Atomic number.
-        @date 2014
-        @author Karl R. Leikanger.
-
-        '''
-        return self.chem_elems_indx.get(atomic_nr)
-
-
-    def print_cp2k_basisfile(self, filename):
+    def __print_cp2k_basisfile(self, filename):
         '''
         @brief Print basis to CP2K basisfile.
         @param filename Write basis to a file filename.
@@ -176,26 +210,32 @@ class Basis():
         '''
         #open ofilestream
         f = open(filename,'w')
-        f.write('#\n# This file is automatically generated by PROGNAME\n#\n')
-        print('Writing basis in CP2K format to file:', filename)
+        f.write('#\n# CP2K input file.\n')
+        f.write('# This file is automatically generated by PROGNAME.\n')
+        f.write('# from the DALTON input file %s.\n'%self.infile_name)
+        print('Writing basis in CP2K format to file: %s'%filename)
 
         for elem in self.chem_elems:
-            self.print_elem_to_cp2k_basisfile(elem, f)
+            self.__print_elem_to_cp2k_basisfile(elem, f)
         
         f.close()
 
-    def print_elem_to_cp2k_basisfile(self, elem, f):
+    def __print_elem_to_cp2k_basisfile(self, elem, f):
         '''
         @brief Print C to CP2K basisfile.
-        @param elem ChemElemBasis element.
+        @param elem __ChemElemBasis element.
         @param f Filestream.
         @date 2014
         @author Karl R. Leikanger.
 
-        '''
+        Orbitals are written to file in a specific order. 
+        They are sorted after:
+            - Their exponents arrays.
+            - A.M (within each exponents array).
 
+        '''
         #sort the ao's after the exponents arrays
-        aos = sorted(elem.ao, key=lambda AtomicOrbital: AtomicOrbital.e)
+        aos = sorted(elem.ao, key=lambda __AtomicOrbital: __AtomicOrbital.e)
 
         #extract the unique exponents arrays
         exp_unique = []
@@ -219,7 +259,7 @@ class Basis():
         #                repeat = True
 
         #print Element symbol Name of the basis set  Alias names
-        elem_symbol = param.elem_symbols.get(elem.atomic_nr) 
+        elem_symbol = param.elem_symbol_from_a.get(elem.atomic_nr) 
         f.write('#\n# ----------------- \n#\n')
         f.write('%s %s \n'%(elem_symbol, self.basis_name))
         #print nset (repeat the following block of lines nset times)
@@ -237,13 +277,13 @@ class Basis():
                 if (indx_aos==len(aos)): break #error
 
             #sort aos after l
-            aos_set = sorted(aos_set, key=lambda AtomicOrbital: AtomicOrbital.l)
+            aos_set = sorted(aos_set, key=lambda __AtomicOrbital: __AtomicOrbital.l)
 
-            # collect min and max A.M.
+            #collect min and max A.M.
             lmin =  aos_set[0].l
             lmax =  aos_set[-1].l
 
-            # sort coefs after A.M. (in c_l)
+            #sort coefs after A.M. (in c_l)
             c_l = []
             tmp = []
             ltmp = lmin
@@ -255,8 +295,11 @@ class Basis():
                 tmp.append(aos_set[j].c)
             c_l.append(tmp)
 
-            # get number of elements with each A.M.
+            #get number of elements with each A.M.
             lens = [ len(c_l[k]) for k in range(lmax-lmin+1) ]
+
+            #keep track of the order the orbitals are printed
+            elem.tags_permutations += [ x.tag for x in aos_set ]
 
             #print n lmin lmax nexp nshell(lmin) nshell(lmin+1) ... nshell(lmax)
             f.write('%i %i %i %i '\
@@ -271,10 +314,21 @@ class Basis():
                     for k in range(lens[l]):
                         f.write('%f '%c_l[l][k][j])
                 f.write('\n')
+    
+    def __get_index_of_elem(self, atomic_nr):
+        '''
+        @brief return the index (in elemset) of the basis for atomic_nr.
+        @param atomic_nr Atomic number.
+        @date 2014
+        @author Karl R. Leikanger.
 
-basis = Basis('6-311G**')
-basis.read_dalton_basisfile('6-311G**')
-basis.print_cp2k_basisfile('slett')
+        '''
+        return self.chem_elems_indx.get(atomic_nr)
+
+
+#basis = Basis('STO-6G', 'STO-6G')
+#basis.__read_dalton_basisfile()
+#basis.__print_cp2k_basisfile('cp2k_STO-6G')
 
 #print(len(basis.chem_elems))
 #for e in basis.chem_elems[int(sys.argv[1])].ao:

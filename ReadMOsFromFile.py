@@ -1,5 +1,8 @@
 #see CP2K cp_fm_types.F
 import sys
+import basis
+import IO
+
 try:
     import numpy as np
 except:
@@ -27,7 +30,7 @@ class MOinfo():
     double_type = ''
     rt_mos = ''        #TODO should be input
     i_nmo = 9999999999 #TODO should be input ?
-    
+
     '''
     basis_name = ''
     nspin = 0
@@ -39,8 +42,7 @@ class MOinfo():
     ...
     '''
 
-    def __init__(self, filename, \
-            rt_mos = False, \
+    def __init__(self, filename, rt_mos = False, \
             int_type = np.int32, \
             double_type = np.float64):
         '''
@@ -50,7 +52,6 @@ class MOinfo():
         @date 2014
         @author Karl R. Leikanger.
         '''
-
         self.rt_mos = rt_mos
         self.filename = filename
         self.int_type = int_type
@@ -58,116 +59,75 @@ class MOinfo():
 
         self.read_restart_file_cp2k_format()
 
-
-    def read_record(self, f, dtype, nread):
-        '''
-        @brief Read a single record from a fortran output file.
-        @param f Inputstream.
-        @param datatype Numpy datatype.
-        @param nread Number of datatype elements to read. 
-        @return retvec Numpy array with read data.
-        @date 2014
-        @author Karl R. Leikanger.
-
-        Fortran IO is record based, not stream based:
-        For unformated IO, Fortran compilers typically write the length of 
-        the record at the beginning and end of the record. Most but not all 
-        compilers use four bytes. 
-
-        '''
-
-        buf_type = self.int_type
-
-        c1 = np.fromfile(f, dtype=buf_type, count=1)[0]
-        retvec = np.fromfile(f, dtype=dtype, count=nread)
-        c2 = np.fromfile(f, dtype=buf_type, count=1)[0]
-
-        if (c1 != c2):
-            #TODO Detailed error message
-            print('\nError in input file. Check output format, datatypes etc.\n')
-            exit(-1)
-
-        return retvec
-
-    def read_restart_file_cp2k_format(self): 
+    def read_restart_file_cp2k_format(self, ):
         '''
         @brief Load CP2K input file.
         @date 2014
         @author Karl R. Leikanger.
 
+        See CP2K:qs_mo_io:read_mos_restart_low
         '''
+        read_record = IO.ReadFortranBinaryFile(\
+                self.int_type, self.double_type, self.filename\
+                ).read_record
 
-        int_type = self.int_type
-        double_type = self.double_type
-        int_nbytes = int_type(0).nbytes
-        double_nbytes = double_type(0).nbytes
-
-        print('Reading binary file %s assuming %iB integer and %iB float.' \
-                %(self.filename, int_nbytes, double_nbytes))
-
-        try:
-            f = open(self.filename, "rb")
-        except IOError as e:
-            print("Error while trying to open %s", self.filename)
-            print("IO error({0}): {1}".format(e.errno, e.strerror))
-        except:
-            print('unexcepted error', sys.exc_info()[0])
-            raise
-
-        # Read the file. See CP2K:qs_mo_io:read_mos_restart_low
-
-        [i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax] =\
-                self.read_record(f, int_type, 5)
-
-        nsetinfo = self.read_record(f, int_type, i_natom)
-
-        nshell_info = self.read_record(f, int_type, i_nsetmax*i_natom)
+        # Read general info.
+        [i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax] = read_record('INT', 5)
+        print([i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax])
+        nsetinfo = read_record('INT', i_natom)
+        nshell_info = read_record('INT', i_nsetmax*i_natom)
         nshell_info.reshape(i_nsetmax, i_natom)
-
-        nso_info = self.read_record(f, int_type, i_nshellmax*i_nsetmax*i_natom)
+        nso_info = read_record('INT', i_nshellmax*i_nsetmax*i_natom)
         nso_info.reshape(i_nshellmax, i_nsetmax, i_natom)
 
+        #read MO's
         i_nmo = self.i_nmo
-
         for ispin in range(1, i_nspin+1):
             #IF (para_env%ionode.AND.(nmo > 0)) THEN
             [i_nmo_read, i_homo, i_lfomo, i_nelectron] =\
-                    self.read_record(f, int_type, 4)
+                    read_record('INT', 4)
 
             #TODO assert (nmo_read >= nmo)
             i_nmo = min(i_nmo, i_nmo_read) #??
-            
-            dd_eig = np.zeros(i_nmo, dtype=double_type)
-            dd_occ = np.zeros(i_nmo, dtype=double_type)
-            tmp =  self.read_record(f, double_type, i_nmo_read*2)
-            dd_eig[0:i_nmo] = tmp[0:i_nmo]  
-            dd_occ[0:i_nmo] = tmp[i_nmo_read:i_nmo_read+i_nmo]
+
+            tmp =  read_record('DOUBLE', i_nmo_read*2)
+            dd_eig = tmp[0:i_nmo]
+            dd_occ = tmp[i_nmo_read:i_nmo_read+i_nmo]
+
+            #open filestream f
 
             if self.rt_mos: #unres or res??
-                for imat in range(2*ispin-1, 2*ispin+1):	
+                for imat in range(2*ispin-1, 2*ispin+1):
                     for i in range(1, i_nmo+1):
 
-                        dd_vecbuff = self.read_record(f, double_type, i_nao)
+                        dd_vecbuff = read_record('DOUBLE', i_nao)
                         '''
                         see in qs_mo_io.F what to do with the data
                         '''
             else:
                 for i in range(1, i_nmo+1):
 
-                    dd_vecbuff = self.read_record(f, double_type, i_nao)
+                    dd_vecbuff = read_record('DOUBLE', i_nao)
+                    print(dd_vecbuff)
 
+                    #a = system.atom[i].get_a()
+                    #i = basis.get_index_of_elem(a)
+                    #permutations = basis.elements[i].tags_permutations
+                    #dd_vecbuff = [ dd_vecbuff[i] for i in permutations ]
+
+                    #further
 
                     #
                     # Input info
                     #
                     '''
                     for iatom in range(1, natom+1):
-                        get_atomic_kind
+                        get_atomic_kind from SimulationInfo
                         get_qs_kind (??)
                         if associated(orb_basis_set) then
-                            get_gto_basis
+                            get_gto_basis from SimulationInfo.basis
                             minbas=false
-                        elseif associated(dftb_parameter) then
+                        elseif associated(dftb_parameter) then ?
                             get_dftb_atom_param
                             minbas=false
                         else
@@ -183,21 +143,21 @@ class MOinfo():
 
                   use_this = .TRUE.
                   iset_read = 1
-                  DO iset=1,nset 
-                  '''
-                  # Input from basis file. 
-                  # the number of sets in basis, each contains 
+                  DO iset=1,nset
+                   '''
+                  # Input from basis file.
+                  # the number of sets in basis, each contains
                   # nexp * (lshell(lmin) + ... + nshell(lmax)) ao's
-                  '''
+                    '''
                      ishell_read = 1
                      IF(minbas) THEN
                         nnshell = lmax+1
                      ELSE
                         nnshell = nshell(iset)
-                        '''
-                        # Input from basis file. 
+                    '''
+                        # Input from basis file.
                         # nshell input
-                        '''
+                    '''
                      END IF
                      DO ishell=1,nnshell
                         IF(minbas) THEN
@@ -231,24 +191,23 @@ class MOinfo():
                            irow = irow + 1
                         END DO
                         use_this = .TRUE.
-                        '''
+                    '''
                         #then set MO's
-                        '''
+                    '''
                 CALL mp_bcast(vecbuffer,source,group)
                 CALL cp_fm_set_submatrix(mos(ispin)%mo_set%mo_coeff,&
                  vecbuffer,1,i,nao,1,transpose=.TRUE.,error=error)
 
-            '''
+                    '''
             #Read the rest of the nmo's if there are any...
             '''
             IF(nmo>0) THEN
                DO i=nmo+1,nmo_read
                     READ (rst_unit) vecbuffer_read
 
-                    '''
+             '''
 
-        f.close()
-''' 
+'''
 
          #      IF (para_env%ionode) THEN
          #         READ (rst_unit) vecbuffer
@@ -271,7 +230,7 @@ class MOinfo():
 			#
 			#
 			#! Skip extra MOs if there any
-'''		
+                    '''
 
 
 #	def print_restart_file_dalton_format(self):
@@ -283,7 +242,7 @@ class MOinfo():
 
 #__debug__ set to?
 #assert a<b, 'errorstring'
-moinfo = MOinfo('slettmeg.wfn')
+#moinfo = MOinfo('slettmeg.wfn')
 
 
 
@@ -327,7 +286,7 @@ Below a function to read mo coeff from unit ires
 #  END SUBROUTINE read_mo_set_basic
 
 '''
-Read unformatted is 
+Read unformatted is
 '''
 
 #    CALL cp_fm_read_unformatted(mo_set%mo_coeff,ires,error)
@@ -355,38 +314,6 @@ The struct looks like this
 #  END TYPE cp_fm_type
 
 
-'''
-        To complicate the situation: some compilers such as Gfortran and Intel
-        Fortran support records larger than 2 GB despite having 4 byte record 
-        markers, by using subrecords.
+#import sys
+#o = MOinfo(sys.argv[1])
 
-        This is the reason why it may be smarter to convert the files using
-        a fortran routine that is compiled with the same compiler as CP2K.
-
-        Here, we simply use 4B buffers. But obvuously this is not a optimal 
-        solution.
-'''
-
-''' 
-Basis set format: CP2K
-======================
-Element symbol  Name of the basis set  Alias names
-nset (repeat the following block of lines nset times)
-n lmin lmax nexp nshell(lmin) nshell(lmin+1) ... nshell(lmax-1) nshell(lmax)
-a(1)      c(1,l,1)      c(1,l,2) ...      c(1,l,nshell(l)-1)      c(1,l,nshell(l)), l=lmin,lmax
-a(2)      c(2,l,1)      c(2,l,2) ...      c(2,l,nshell(l)-1)      c(2,l,nshell(l)), l=lmin,lmax
- .         .             .                 .                       .
- .         .             .                 .                       .
- .         .             .                 .                       .
-a(nexp-1) c(nexp-1,l,1) c(nexp-1,l,2) ... c(nexp-1,l,nshell(l)-1) c(nexp-1,l,nshell(l)), l=lmin,lmax
-a(nexp)   c(nexp,l,1)   c(nexp,l,2)   ... c(nexp,l,nshell(l)-1)   c(nexp,l,nshell(l)), l=lmin,lmax
-
-
-nset     : Number of exponent sets
-n        : Principle quantum number (only for orbital label printing)
-lmax     : Maximum angular momentum quantum number l
-lmin     : Minimum angular momentum quantum number l
-nshell(l): Number of shells for angular momentum quantum number l
-a        : Exponent
-c        : Contraction coefficient
-'''
