@@ -86,8 +86,25 @@ class MOinfo():
             #IF (para_env%ionode.AND.(nmo > 0)) THEN
             [i_nmo_read, i_homo, i_lfomo, i_nelectron] =\
                 read_record('INT', 4)
+            '''
+        nmo = MIN(nmo,nmo_read)
+        CALL cp_assert((nmo_read >= nmo),cp_warning_level,cp_assertion_failed,routineP,&
+              "The number of MOs on the restart unit is smaller than the number of "//&
+              "the allocated MOs. The MO set will be padded with zeros!"//&
+              CPSourceFileRef,&
+              only_ionode=.TRUE.)
+        CALL cp_assert((nmo_read<=nmo),cp_warning_level,cp_assertion_failed,routineP,&
+             "The number of MOs on the restart unit is greater than the number of "//&
+             "the allocated MOs. The read MO set will be truncated!"//&
+             CPSourceFileRef,&
+             only_ionode=.TRUE.)
+             '''
 
-            # TODO assert (nmo_read >= nmo)
+             #
+             # Various tests to check that nmo > i_homo etc.
+             # ...
+             #
+
             i_nmo = min(i_nmo, i_nmo_read)  # ??
 
             tmp = read_record('DOUBLE', i_nmo_read*2)
@@ -416,17 +433,6 @@ class MOinfo():
                     dd_vecbuff = read_record('DOUBLE', i_nao)
                     print(dd_vecbuff)
 
-                    atom_nr = 0  # XXX n elec(atom_nr) per atom
-                    a = system.atoms[atom_nr].a
-                    basis_indx = basis.get_index_of_elem(a)
-                    print(a)
-                    print(basis_indx)
-                    permutations = basis.elements[i].tags_permutations
-                    dd_vecbuff = [ dd_vecbuff[i] for i in permutations ]
-
-                    print(permutations)
-                    print(dd_vecbuff)
-
                     #further
 
                     #
@@ -434,6 +440,17 @@ class MOinfo():
                     #
                     '''
                     for iatom in range(1, natom+1):
+                        #
+                        # something like this
+                        #
+                        atom_nr = 0
+                        a = system.atoms[atom_nr].a
+                        basis_indx = basis.get_index_of_elem(a)
+                        permutations = basis.elements[i].tags_permutations
+                        dd_vecbuff = [ dd_vecbuff[i] for i in permutations ]
+                        #
+                        #
+                        #
                         get_atomic_kind from SimulationInfo
                         get_qs_kind (??)
                         if associated(orb_basis_set) then
