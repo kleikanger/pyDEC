@@ -12,12 +12,6 @@ The orbitals are read from file and stored in the following format:
     (chem_elems.ao),
     -each of these have a list of coeffs (oa.c), a list of exponents (ao.e) and
     a AM quantum number (ao.l) stored.
-
-ex:
-filename = '6-311G**'
-basis = Basis('basisname')
-basis.__read_dalton_basisfile(filename)
-
 '''
 import parameters as param
 from IO import ReadFile
@@ -56,11 +50,11 @@ class Basis():
         '''
         atomic_nr = ''
         ao = ''
-        tags_permutations = ''
+        tags_permutations = '' # XXX delete ?
 
         def __init__(self):
             self.ao = []
-            self.tags_permutations = []
+            self.tags_permutations = [] # XXX delete ?
 
     class __AtomicOrbital():
         '''
@@ -122,6 +116,111 @@ class Basis():
             print('Error: Output basis format <%s> not supported?'
                   % basis_format)
             raise #SystemExit
+
+    def get_mo_transformation(self, codeformat_from, codeformat_to, atoms):
+        '''
+        @brief Set up the transformation of MO's from codeformat_to to\
+            codeformat_from.
+        The pertubation of the mo's is then simple:
+            - mo = [mo[i] for i in pertubations]
+        @return The output is a list with pertubations.
+        @param codeformat_from String object: ('LSDALTON', 'CP2K', ...)
+        @param codeformat_to String object: ('LSDALTON', 'CP2K', ...)
+        @param atoms Elements from inputfile type System.__Atom
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        options = {
+            'dalton' : self.__get_aoorder_dalton,
+            'lsdalton' : self.__get_aoorder_dalton,
+            'cp2k' : self.__get_aoorder_cp2k
+        }
+        try:
+            pert_from = options[codeformat_from.lower()](atoms)
+            pert_to = options[codeformat_to.lower()](atoms)
+        except:
+            print('Error in set_up_ao_order: codeformat <%s> or <%s> not \
+                  supported?.' % (codeformat_to, codeformat_from))
+            raise
+
+        # duplicate elements or different length of pert_to and pert_from?
+        lens = [len(set(pert_to)), len(pert_to),
+                len(set(pert_from)), len(pert_from)]
+        if min(lens) != max(lens):
+            print('Error in set_up_ao_order: Something wrong with the \
+                  pertubation arrays')
+            raise SystemExit
+
+        pertubations = []
+        for x in pert_from:
+            pertubations.append(pert_to.index(x))
+        return pertubations
+
+    def get_index_of_elem(self, atomic_nr):
+        '''
+        @brief return the index (in elemset) of the basis for atomic_nr.
+        @param atomic_nr Atomic number.
+        @date 2014
+        @author Karl R. Leikanger.
+
+        '''
+        return self.chem_elems_indx.get(atomic_nr)
+
+    def get_chem_elem(self, atomic_nr):
+        '''
+        @brief Find and return the correct __ChemElemBasis object.
+        @param atomic_nr Atomic number.
+        @return the __ChemElemBasis object for elem with object.a = atomic_nr.
+        @date 2014
+        @author Karl R. Leikanger.
+
+        '''
+        indx = self.chem_elems_indx.get(atomic_nr)
+        return self.chem_elems[indx]
+
+    def __get_ao_from_tag(self, elem, tag):
+        '''
+        @brief Return __AtomicOrbital object with obj.tag==tag
+        @param elem Chemical element.
+        @param tag Tag of ao.
+        @return __AtomicOrbital ao with ao.tag==tag
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        # TODO set un dict { tag : ao (ao.tag==tag)}
+        for ao in elem.ao:
+            if ao.tag == tag:
+                return ao
+        # TODO setup tagmax with error msg
+        print('error: ao with tag %s does not excist' % tag)
+        raise SystemExit
+
+    def __sort_chem_elems(self):
+        '''
+        @brief Sort chem elem after atomic numbers and check for duplicates.
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        # set up list of all Chemical element in the basis
+        elemset = []
+        for elem in self.chem_elems[:]:
+            elemset += [elem.atomic_nr]
+
+        # Make sure that the atomic_nr are unique for all chem_elems
+        if len(elemset) > len(set(elemset)):
+            print('Error: Check input basisfile format.')
+            print('Some chem_elems represented more that once.')
+            raise SystemExit
+
+        # Make sure that chem_elems ars sorted after atomic number
+        if (sorted(elemset) != elemset):
+            self.chem_elems = sorted(
+                self.chem_elems,
+                key=lambda __ChemElemBasis: __ChemElemBasis.atomic_nr)
+
+        # set up dict { chem_elems.atomic_nr[i] : i }
+        self.chem_elems_indx = \
+            dict(zip(sorted(elemset), range(len(elemset))))
 
     def __read_dalton_basisfile(self):
         '''
@@ -242,10 +341,10 @@ class Basis():
             for eu in exp_unique:
                 total_n_exp += len(eu)
 
-            # XXX what is the last integer??
+            # XXX what is the meaning os last integer?? Ask S.R.
             f.write('%i %i %i \n'% (total_n_exp, len(aos_set), 0))
 
-            # organize and print exponents
+            # organize and print exponents + coefficients
             zlists  = np.zeros([total_n_exp, len(aos_set)+1], dtype=float)
             b = 0
             for eu in exp_unique:
@@ -266,56 +365,6 @@ class Basis():
                     ostr = str(zlists[i, j]).ljust(14)
                     f.write('%s' % ostr)
                 f.write('\n')
-
-    def __get_order_of_dalton_aos_tags(self, elem):
-        '''
-        @brief Set up the order of the a.o.'s as it is read by the code DALTON.
-        @param atoms Elements from inputfile type System.__Atom
-        @return Tags of the aos in the stored order of CP2K\
-            number of unique exponents arrays.
-        @date 2014
-        @author Karl R. Leikanger.
-        '''
-        # sort the ao's after the exponents arrays
-        aos = sorted(elem.ao, key=lambda __AtomicOrbital: __AtomicOrbital.e,
-                     reverse=True)
-
-        # and then after l
-        tags = []
-        lmax = max([ao.l for ao in aos])
-        for l in range(lmax+1):
-            for ao in aos:
-                if ao.l==l:
-                    tags.append(ao.tag)
-
-        return tags
-
-    def __sort_chem_elems(self):
-        '''
-        @brief Sort chem elem after atomic numbers and check for duplicates.
-        @date 2014
-        @author Karl R. Leikanger.
-        '''
-        # set up list of all Chemical element in the basis
-        elemset = []
-        for elem in self.chem_elems[:]:
-            elemset += [elem.atomic_nr]
-
-        # Make sure that the atomic_nr are unique for all chem_elems
-        if len(elemset) > len(set(elemset)):
-            print('Error: Check input basisfile format.')
-            print('Some chem_elems represented more that once.')
-            raise SystemExit
-
-        # Make sure that chem_elems ars sorted after atomic number
-        if (sorted(elemset) != elemset):
-            self.chem_elems = sorted(
-                self.chem_elems,
-                key=lambda __ChemElemBasis: __ChemElemBasis.atomic_nr)
-
-        # set up dict { chem_elems.atomic_nr[i] : i }
-        self.chem_elems_indx = \
-            dict(zip(sorted(elemset), range(len(elemset))))
 
     def __print_cp2k_basisfile(self, filename):
         '''
@@ -403,103 +452,124 @@ class Basis():
 
             # print exponent coeffs(lmin), ..., coeff(lmax)
             for j in range(len(e)):
-                ostr = str(e[j]).ljust(12)
+                ostr = str(e[j]).ljust(14)
                 f.write('%s ' % ostr)
                 for l in range(lmax-lmin+1):
                     for k in range(lens[l]):
-                        ostr = str(c_l[l][k][j]).ljust(12)
+                        ostr = str(c_l[l][k][j]).ljust(14)
                         f.write('%s ' % ostr)
                 f.write('\n')
 
-    def get_index_of_elem(self, atomic_nr):
-        '''
-        @brief return the index (in elemset) of the basis for atomic_nr.
-        @param atomic_nr Atomic number.
-        @date 2014
-        @author Karl R. Leikanger.
-
-        '''
-        return self.chem_elems_indx.get(atomic_nr)
-
-    def get_chem_elem(self, atomic_nr):
-        '''
-        @brief Find and return the correct __ChemElemBasis object.
-        @param atomic_nr Atomic number.
-        @return the __ChemElemBasis object for elem with object.a = atomic_nr.
-        @date 2014
-        @author Karl R. Leikanger.
-
-        '''
-        indx = self.chem_elems_indx.get(atomic_nr)
-        return self.chem_elems[indx]
-
-    def set_up_ao_order(self, codeformat, atoms):
-        '''
-        @brief Set up the order of the a.o.'s as it is read by the code <code>.
-        The output is a list of [[chem_elems.ao.tag, system.atoms.tag], ...]
-        @param codeformat String object: ('LSDALTON', 'CP2K', ...)
-        @param atoms Elements from inputfile type System.__Atom
-        @return List of aos in the stored order of <codeformat>\
-            stored as list [[chem_elems.ao.tag, system.atoms.tag], ...]
-        @date 2014
-        @author Karl R. Leikanger.
-
-        '''
-        options = {
-            'dalton' : self.__get_aoorder_dalton,
-            'lsdalton' : self.__get_aoorder_dalton,
-            'cp2k' : self.__get_aoorder_cp2k
-        }
-        try:
-            return options[codeformat.lower()](atoms)
-        except:
-            print('Error in set_up_ao_order: codeformat <%s> not supported?.'
-                  % codeformat)
-            raise # SystemExit
-
     def __get_aoorder_dalton(self, atoms):
         '''
-        @brief Set up the order of the a.o.'s as it is read by the code DALTON.
-        The output is a list of [[chem_elems.ao.tag, system.atoms.tag], ...]
-        @param atoms Elements from inputfile type System.__Atom
-        @return List of aos in the stored order of DALTON\
-            stored as list [[chem_elems.ao.tag, system.atoms.tag], ...]
+        @brief Set up the order of the a.o.'s as it is stored by the code CP2K.
+        @return The output is a list of pertubations to pyQCSlink format.
+        @param atoms Elements from inputfile type System.__Atom.\
+            The atoms in the system in the order they are read by the code.
         @date 2014
         @author Karl R. Leikanger.
         '''
+
+        # How is the orbitals ordered for a given l
+        # l=1:px,py,px l=2:pxy,pxz,pyz,p(xx-yy),pzz etc..
+        m_order = {  # l : [orbitals, ...]
+            0 : [0],
+            1 : [0, 1, 2],  # x,z,y ??
+            # 2 : ? TODO find the order, see cp2k source.
+        }
+
+        # extend tags with px,py,pz,...
+        # and append tagslists of different atoms.
         ao_list = []
+        listtot = 0
         for atom in atoms:
-            indx = get_index_of_elem(atom.a)  # , basis XXX add func for several basis sets
-            elem = self.chem_elems[indx]
-
-            tags, n = self.__get_order_of_dalton_aos_tags(elem)
-
-            ao_list += [[indx, x] for x in tags]
-
+            # add func for several basis sets.
+            elem = self.get_chem_elem(atom.a)  # atom.a = Atomic Number
+            tags = self.__get_order_of_dalton_aos_tags(elem)
+            order = tags.copy()
+            j = -1
+            for i in range(len(tags)):
+                j += 1
+                ao =  self.__get_ao_from_tag(elem, tags[i])
+                tmp = [(tags[i] + x) for x in m_order[ao.l]]
+                for k in range(len(order)):
+                    if order[k]>order[j]:
+                        order[k] += len(tmp)-1
+                order[j] = tmp[0]
+                for k in range(len(tmp)-1):
+                    order.insert(i+1, tmp[-1-k])
+                    j += 1
+            ao_list += [(x + listtot) for x in order]
+            listtot += max(order)
         return ao_list
 
+    def __get_order_of_dalton_aos_tags(self, elem):
+        '''
+        @brief Set up the order of the a.o.'s as it is read by the code DALTON.
+        @param atoms Elements from inputfile type System.__Atom
+        @return Tags of the aos in the stored order of CP2K\
+            number of unique exponents arrays.
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        # sort the ao's after the exponents arrays
+        aos = sorted(elem.ao, key=lambda __AtomicOrbital: __AtomicOrbital.e,
+                     reverse=True)
+
+        # and then after l
+        tags = []
+        lmax = max([ao.l for ao in aos])
+        for l in range(lmax+1):
+            for ao in aos:
+                if ao.l==l:
+                    tags.append(ao.tag)
+
+        return tags
 
     def __get_aoorder_cp2k(self, atoms):
         '''
-        @brief Set up the order of the a.o.'s as it is read by the code CP2K.
-        The output is a list of [[chem_elems.ao.tag, system.atoms.tag], ...]
-        @param atoms Elements from inputfile type System.__Atom
-        @return List of aos in the stored order of CP2K\
-            stored as list [[chem_elems.ao.tag, system.atoms.tag], ...]
+        @brief Set up the order of the a.o.'s as it is stored by the code CP2K.
+        @return The output is a list of pertubations to pyQCSlink format.
+        @param atoms Elements from inputfile type System.__Atom.\
+            The atoms in the system in the order they are read by the code.
         @date 2014
         @author Karl R. Leikanger.
         '''
         # see a cp2k/cp2k/src/atoms_imput.F
 
-        ao_list = []
-        for atom in atoms:
-            indx = get_index_of_elem(atom.a)  # , basis XXX add func for several basis sets
-            elem = self.chem_elems[indx]
+        # How is the orbitals ordered for a given l
+        # l=1:px,py,px l=2:pxy,pxz,pyz,p(xx-yy),pzz etc..
+        m_order = {  # l : [orbitals, ...]
+            0 : [0],
+            1 : [1, 2, 0],  # x,z,y
+            # 2 : ? TODO find the order, see cp2k source.
+        }
 
+        # extend tags with px,py,pz,...
+        # and append tagslists of different atoms.
+        ao_list = []
+        listtot = 0
+        for atom in atoms:
+            # add func for several basis sets.
+            elem = self.get_chem_elem(atom.a)  # atom.a = Atomic Number
             tags, n = self.__get_order_of_CP2K_aos_tags(elem)
 
-            ao_list += [[indx, x] for x in tags]
+            order = tags.copy()
+            j = -1
 
+            for i in range(len(tags)):
+                j += 1
+                ao =  self.__get_ao_from_tag(elem, tags[i])
+                tmp = [(tags[i] + x) for x in m_order[ao.l]]
+                for k in range(len(order)):
+                    if order[k]>order[j]:
+                        order[k] += len(tmp)-1
+                order[j] = tmp[0]
+                for k in range(len(tmp)-1):
+                    order.insert(i+1, tmp[-1-k])
+                    j += 1
+            ao_list += [(x + listtot) for x in order]
+            listtot += max(order)
         return ao_list
 
     def __get_order_of_CP2K_aos_tags(self, elem):
@@ -548,10 +618,10 @@ class Basis():
 
 
 
-basis = Basis('STO-3G')
-basis.read_basisfile('STO-3G', 'DALTON')
-basis.print_basisfile('cp2k_STO-3G__2', 'CP2K')
-basis.print_basisfile('dalton_STO-3G__2', 'DALTON')
+basis = Basis('STO-6G')
+basis.read_basisfile('STO-6G', 'DALTON')
+basis.print_basisfile('cp2k_STO-6G__2', 'CP2K')
+basis.print_basisfile('dalton_STO-6G__2', 'DALTON')
 #basis.__get_order_of_dalton_aos_tags(self, basis.chem_elems[0])
 # print(len(basis.chem_elems))
 # for e in basis.chem_elems[int(sys.argv[1])].ao:

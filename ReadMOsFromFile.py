@@ -108,8 +108,16 @@ class MOinfo():
             i_nmo = min(i_nmo, i_nmo_read)  # ??
 
             tmp = read_record('DOUBLE', i_nmo_read*2)
-            dd_eig = tmp[0:i_nmo]
-            dd_occ = tmp[i_nmo_read:i_nmo_read+i_nmo]
+            try:
+                dd_eig = tmp[0:i_nmo]
+            except:
+                print('first one')
+                raise
+            try:
+                dd_occ = tmp[i_nmo_read:i_nmo_read+i_nmo]
+            except:
+                print('second one')
+                raise
 
             # open filestream f
 
@@ -412,10 +420,16 @@ class MOinfo():
 
             # TODO assert (nmo_read >= nmo)
             i_nmo = min(i_nmo, i_nmo_read)  # ??
+            print('nmo_read : %i' % i_nmo_read)
 
             tmp = read_record('DOUBLE', i_nmo_read*2)
             dd_eig = tmp[0:i_nmo]
             dd_occ = tmp[i_nmo_read:i_nmo_read+i_nmo]
+
+            print('eigenvalues:')
+            print(dd_eig)
+            print('occupation:')
+            print(dd_occ)
 
             # open filestream f
 
@@ -432,6 +446,11 @@ class MOinfo():
 
                     dd_vecbuff = read_record('DOUBLE', i_nao)
                     print(dd_vecbuff)
+
+                    #old = basis.set_up_ao_order('CP2K', atoms)
+                    #new = basis.set_up_ao_order('DALTON', atoms)
+
+
 
                     #further
 
@@ -644,7 +663,7 @@ The struct looks like this
 
 
 import sys
-o = MOinfo('Si_bulk8-RESTART.wfn')
+#o = MOinfo('Si_bulk8-RESTART.wfn')
 
 #!    PRIVATE
 #     CHARACTER(LEN=60) :: name
@@ -662,9 +681,14 @@ basis.print_basisfile('cp2k_STO-3G', 'CP2K') #inp: output filename, outputformat
 
 from SimulationInfo import System
 system = System()
-system.read_system_info('H2.mol', 'LSDALTON')
+system.read_system_info('N2.mol', 'LSDALTON')
 
-o = MOinfo('He_bulk2-RESTART.wfn')
-#convert_restart_file ,,
+#o = MOinfo('He_bulk2-RESTART.wfn')
+## convert_restart_file ,,
+#o.read_restart_file_cp2k_format(system, basis)
+
+o = MOinfo('Ne_bulk2-RESTART.wfn')
 o.read_restart_file_cp2k_format(system, basis)
+print('ao order DALTON')
+print(basis.get_mo_transformation('CP2K', 'DALTON', system.atoms))
 
