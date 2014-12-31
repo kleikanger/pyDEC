@@ -50,11 +50,11 @@ class Basis():
         '''
         atomic_nr = ''
         ao = ''
-        tags_permutations = '' # XXX delete ?
+        tags_permutations = ''  # XXX delete ?
 
         def __init__(self):
             self.ao = []
-            self.tags_permutations = [] # XXX delete ?
+            self.tags_permutations = []  # XXX delete ?
 
     class __AtomicOrbital():
         '''
@@ -86,15 +86,15 @@ class Basis():
         self.infile_name = infile_name
 
         options = {
-            'dalton' : self.__read_dalton_basisfile,
-            'lsdalton' : self.__read_dalton_basisfile
+            'dalton': self.__read_dalton_basisfile,
+            'lsdalton': self.__read_dalton_basisfile
         }
         try:
             options[basis_format.lower()]()
         except:
             print('Error: Basis input format <%s> not supported?'
                   % basis_format)
-            raise # SystemExit
+            raise  # SystemExit
 
     def print_basisfile(self, outputfile_name, basis_format):
         '''
@@ -103,19 +103,18 @@ class Basis():
         @param basis_format Format of outputfile.
         @date 2014
         @author Karl R. Leikanger.
-
         '''
         options = {
-            'cp2k' : self.__print_cp2k_basisfile,
-            'dalton' : self.__print_dalton_basisfile,
-            'lsdalton' : self.__print_dalton_basisfile
+            'cp2k': self.__print_cp2k_basisfile,
+            'dalton': self.__print_dalton_basisfile,
+            'lsdalton': self.__print_dalton_basisfile
         }
         try:
             options[basis_format.lower()](outputfile_name)
         except:
             print('Error: Output basis format <%s> not supported?'
                   % basis_format)
-            raise #SystemExit
+            raise  # SystemExit
 
     def get_mo_transformation(self, codeformat_from, codeformat_to, atoms):
         '''
@@ -131,9 +130,9 @@ class Basis():
         @author Karl R. Leikanger.
         '''
         options = {
-            'dalton' : self.__get_aoorder_dalton,
-            'lsdalton' : self.__get_aoorder_dalton,
-            'cp2k' : self.__get_aoorder_cp2k
+            'dalton': self.__get_aoorder_dalton,
+            'lsdalton': self.__get_aoorder_dalton,
+            'cp2k': self.__get_aoorder_cp2k
         }
         try:
             pert_from = options[codeformat_from.lower()](atoms)
@@ -152,8 +151,8 @@ class Basis():
             raise SystemExit
 
         pertubations = []
-        for x in pert_from:
-            pertubations.append(pert_to.index(x))
+        for x in pert_to:
+            pertubations.append(pert_from.index(x))
         return pertubations
 
     def get_index_of_elem(self, atomic_nr):
@@ -310,42 +309,38 @@ class Basis():
         '''
         # print Element symbol Name of the basis set
         elem_symbol = param.elem_symbol_from_a.get(elem.atomic_nr)
-        f.write('$\n$\n')
-        f.write('$ --- Elem = %s, Basis = %s --- \n'
+        f.write('$\n$\n$ --- Elem = %s, Basis = %s --- \n'
                 % (elem_symbol, self.basis_name))
         f.write('A %i\n' % elem.atomic_nr)
 
-        # get order of AO's tags
+        # get AO's tags sorted in dalton order
         tags = self.__get_order_of_dalton_aos_tags(elem)
-
-        # sort aos after tags
-        indices = [x - min(tags[:]) for x in tags]
-        aos = [elem.ao[i] for i in indices]
+        # sort aos acc. to tags
+        # indices = [x - min(tags[:]) for x in tags]
+        # aos = [elem.ao[i] for i in indices]
+        aos = [self.__get_ao_from_tag(elem, tag) for tag in tags]
 
         lsym = ['S', 'P', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
-        lset = set([ao.l for ao in aos])
-        for l in lset:
-
+        for l in set([ao.l for ao in aos]):
             f.write('$\n$ %s - type functions:\n' % lsym[l])
 
-            # extract all with the correct AM
-            aos_set = [ao for ao in aos if ao.l==l]
-
-            # extract the unique exponents arrays
+            # extract ao's all with the correct AM
+            aos_set = [ao for ao in aos if ao.l == l]
+            # extract all 'unique' exponents arrays
             exp_unique = []
             for ao in aos_set:
                 if ao.e not in exp_unique:
                     exp_unique.append(ao.e)
-
+            # get total nr of exponents
             total_n_exp = 0
             for eu in exp_unique:
                 total_n_exp += len(eu)
 
             # XXX what is the meaning os last integer?? Ask S.R.
-            f.write('%i %i %i \n'% (total_n_exp, len(aos_set), 0))
+            f.write('%i %i %i \n' % (total_n_exp, len(aos_set), 0))
 
             # organize and print exponents + coefficients
-            zlists  = np.zeros([total_n_exp, len(aos_set)+1], dtype=float)
+            zlists = np.zeros([total_n_exp, len(aos_set)+1], dtype=float)
             b = 0
             for eu in exp_unique:
                 leu = len(eu)
@@ -469,12 +464,11 @@ class Basis():
         @date 2014
         @author Karl R. Leikanger.
         '''
-
-        # How is the orbitals ordered for a given l
+        # How is the orbitals ordered for a given l?
         # l=1:px,py,px l=2:pxy,pxz,pyz,p(xx-yy),pzz etc..
         m_order = {  # l : [orbitals, ...]
-            0 : [0],
-            1 : [0, 1, 2],  # x,z,y ??
+            0: [0],
+            1: [0, 1, 2],  # x,z,y ??
             # 2 : ? TODO find the order, see cp2k source.
         }
 
@@ -490,10 +484,10 @@ class Basis():
             j = -1
             for i in range(len(tags)):
                 j += 1
-                ao =  self.__get_ao_from_tag(elem, tags[i])
+                ao = self.__get_ao_from_tag(elem, tags[i])
                 tmp = [(tags[i] + x) for x in m_order[ao.l]]
                 for k in range(len(order)):
-                    if order[k]>order[j]:
+                    if order[k] > order[j]:
                         order[k] += len(tmp)-1
                 order[j] = tmp[0]
                 for k in range(len(tmp)-1):
@@ -521,7 +515,7 @@ class Basis():
         lmax = max([ao.l for ao in aos])
         for l in range(lmax+1):
             for ao in aos:
-                if ao.l==l:
+                if ao.l == l:
                     tags.append(ao.tag)
 
         return tags
@@ -540,8 +534,8 @@ class Basis():
         # How is the orbitals ordered for a given l
         # l=1:px,py,px l=2:pxy,pxz,pyz,p(xx-yy),pzz etc..
         m_order = {  # l : [orbitals, ...]
-            0 : [0],
-            1 : [1, 2, 0],  # x,z,y
+            0: [0],
+            1: [1, 2, 0],  # x,z,y
             # 2 : ? TODO find the order, see cp2k source.
         }
 
@@ -559,10 +553,10 @@ class Basis():
 
             for i in range(len(tags)):
                 j += 1
-                ao =  self.__get_ao_from_tag(elem, tags[i])
+                ao = self.__get_ao_from_tag(elem, tags[i])
                 tmp = [(tags[i] + x) for x in m_order[ao.l]]
                 for k in range(len(order)):
-                    if order[k]>order[j]:
+                    if order[k] > order[j]:
                         order[k] += len(tmp)-1
                 order[j] = tmp[0]
                 for k in range(len(tmp)-1):
@@ -614,15 +608,11 @@ class Basis():
 
         return tags, len(exp_unique)
 
-
-
-
-
 basis = Basis('STO-6G')
 basis.read_basisfile('STO-6G', 'DALTON')
 basis.print_basisfile('cp2k_STO-6G__2', 'CP2K')
 basis.print_basisfile('dalton_STO-6G__2', 'DALTON')
-#basis.__get_order_of_dalton_aos_tags(self, basis.chem_elems[0])
+# basis.__get_order_of_dalton_aos_tags(self, basis.chem_elems[0])
 # print(len(basis.chem_elems))
 # for e in basis.chem_elems[int(sys.argv[1])].ao:
 #    print(e.l)

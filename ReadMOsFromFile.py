@@ -1,4 +1,4 @@
-#see CP2K cp_fm_types.F
+# see CP2K cp_fm_types.F
 import sys
 import basis
 import IO
@@ -18,6 +18,7 @@ except:
 @author Karl R. Leikanger.
 '''
 
+
 class MOinfo():
     '''
     @brief
@@ -29,8 +30,8 @@ class MOinfo():
     filename = ''
     int_type = ''
     double_type = ''
-    rt_mos = ''        #TODO should be input
-    i_nmo = 9999999999 #TODO should be input ?
+    rt_mos = ''         # TODO should be input
+    i_nmo = 9999999999  # TODO should be input ?
 
     '''
     basis_name = ''
@@ -43,9 +44,8 @@ class MOinfo():
     ...
     '''
 
-    def __init__(self, filename, rt_mos = False, \
-            int_type = np.int32, \
-            double_type = np.float64):
+    def __init__(self, filename, rt_mos=False,
+                 int_type=np.int32, double_type=np.float64):
         '''
         @brief The constructor also reads the CP2K datafile (filename)
         @brief and loads the data from the CP2K simulation.
@@ -67,12 +67,13 @@ class MOinfo():
 
         See CP2K:qs_mo_io:read_mos_restart_low
         '''
-        read_record = IO.ReadFortranBinaryFile(\
-                self.int_type, self.double_type, self.filename\
-                ).read_record
+        read_record = IO.ReadFortranBinaryFile(
+            self.int_type, self.double_type, self.filename
+        ).read_record
 
         # Read general info.
-        [i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax] = read_record('INT', 5)
+        [i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax]\
+            = read_record('INT', 5)
         print([i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax])
         # nsetinfo = read_record('INT', i_natom)
         nshell_info = read_record('INT', i_nsetmax*i_natom)
@@ -80,10 +81,10 @@ class MOinfo():
         nso_info = read_record('INT', i_nshellmax*i_nsetmax*i_natom)
         nso_info.reshape(i_nshellmax, i_nsetmax, i_natom)
 
-        #read MO's
+        # read MO's
         i_nmo = self.i_nmo
         for ispin in range(1, i_nspin+1):
-            #IF (para_env%ionode.AND.(nmo > 0)) THEN
+            # IF (para_env%ionode.AND.(nmo > 0)) THEN
             [i_nmo_read, i_homo, i_lfomo, i_nelectron] =\
                 read_record('INT', 4)
             '''
@@ -431,9 +432,15 @@ class MOinfo():
             print('occupation:')
             print(dd_occ)
 
+            pertubations =\
+                basis.get_mo_transformation('CP2K', 'DALTON', system.atoms)
+
             # open filestream f
 
-            if self.rt_mos:  # unres or res??
+            if self.rt_mos:  # unres
+                print('Unrestricted SCF not implemented')
+                raise SystemExit
+
                 for imat in range(2*ispin-1, 2*ispin+1):
                     for i in range(1, i_nmo+1):
 
@@ -441,16 +448,13 @@ class MOinfo():
                         '''
                         see in qs_mo_io.F what to do with the data
                         '''
-            else:
+            else:  # res
                 for i in range(0, i_nmo):
 
                     dd_vecbuff = read_record('DOUBLE', i_nao)
                     print(dd_vecbuff)
-
-                    #old = basis.set_up_ao_order('CP2K', atoms)
-                    #new = basis.set_up_ao_order('DALTON', atoms)
-
-
+                    dd_vecbuff = [dd_vecbuff[i] for i in pertubations]
+                    print(dd_vecbuff)
 
                     #further
 

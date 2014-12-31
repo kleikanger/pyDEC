@@ -10,38 +10,38 @@ class ReadFile():
     '''
     @brief Read lines from file and return as list of strings. Ignore lines that
     @brief starts with cmarkers.
-    @var f Filestream
-    @var cmarkers List of chars. Lines that starts with cmarker are ignored.
-    @var line_nr Wee keep track of the line number.
+    @var __f Filestream
+    @var __cmarkers List of chars. Lines that starts with cmarker are ignored.
+    @var __line_nr Wee keep track of the line number.
     @date 2014
     @author Karl R. Leikanger.
     '''
-    f = ''
-    cmarkers = ''
-    line_nr = ''
-    skip_empty = ''
+    __f = ''
+    __cmarkers = ''
+    __line_nr = ''
+    __skip_empty = ''
 
     def __init__(self, filename, cmarkers='', skip_empty=True):
         '''
         @brief Constructor.
-        @param cmarkers As explained above.
-        @param filename Input file.
-        @param skip_empty Skip empty lines?
+        @param __cmarkers As explained above.
+        @param __filename Input file.
+        @param __skip_empty Skip empty lines?
         @date 2014
         @author Karl R. Leikanger.
         '''
         if type(cmarkers) == str:
             cmarkers = [cmarkers]
-        self.cmarkers = cmarkers
-        self.line_nr = 0
-        self.skip_empty = skip_empty
+        self.__cmarkers = cmarkers
+        self.__line_nr = 0
+        self.__skip_empty = skip_empty
 
         try:
-            self.f = open(filename, "r")
+            self.__f = open(filename, "r")
         except IOError as e:
             print('Error while trying to open %s' % filename)
             print('IO error({0}): {1}'.format(e.errno, e.strerror))
-            sys.exit(-1)
+            raise SystemExit
         except:
             print('unexcepted error', sys.exc_info()[0])
             raise
@@ -52,30 +52,35 @@ class ReadFile():
         @date 2014
         @author Karl R. Leikanger.
         '''
-        self.f.close()
+        self.__f.close()
 
     def get_words_of_line(self):
         '''
-        @brief Returns the next uncommented line as a list of words.
+        @return The next uncommented line as a list of words.
         @date 2014
         @author Karl R. Leikanger.
         '''
         for line in iter(self.f.readline, ''):
-            self.line_nr += 1
+            self.__line_nr += 1
             words = line.split()
             if words == []:
-                if self.skip_empty:
+                if self.__skip_empty:
                     continue
                 else:
                     return ''
-            elif words[0][0] in self.cmarkers:
+            elif words[0][0] in self.__cmarkers:
                 continue
             else:
                 return words
         return ''
 
     def get_line_nr(self):
-        return self.line_nr
+        '''
+        @return current line nr of infile.
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        return self.__line_nr
 
     def skip_lines(self, n):
         '''
@@ -85,16 +90,15 @@ class ReadFile():
         @author Karl R. Leikanger.
         '''
         for i in range(n):
-            self.line_nr += 1
-            self.f.readline()
+            self.__line_nr += 1
+            self.__f.readline()
 
 
-class ReadFortranBinaryFile():
+class FortranIO():
     '''
-    @brief Read fortran (recordbased) binary files.
-    @var int_type Type of intefer numpy.int<xx>
-    @var double_type Type of double numpy.double<xx>
-    @var buf_type numpy.double<xx>
+    @var __int_type Type of intefer numpy.int<xx>
+    @var __double_type Type of double numpy.double<xx>
+    @var __buf_type numpy.double<xx>
     @date 2014
     @author Karl R. Leikanger.
 
@@ -104,28 +108,24 @@ class ReadFortranBinaryFile():
     compilers use four bytes. buf_type must have the same type as the
     buffer.
     '''
+    __int_type = ''
+    __double_type = ''
+    __buf_type = ''
+    __f = ''
 
-    int_type = ''
-    double_type = ''
-    buf_type = ''
-    f = ''
-
-    def __init__(self, int_type, double_type, filename):
+    def __init__(self, int_type, double_type, filename, ds):
         '''
         @param int_type numpy.int<xx>
         @param double_type numpy.double<xx>
         @date 2014
         @author Karl R. Leikanger.
         '''
-        self.int_type = int_type
-        self.double_type = double_type
-        self.buf_type = int_type
-
-        print('Reading binary file %s assuming %iB integer and %iB float.'
-              % (filename, int_type(0).nbytes, double_type(0).nbytes))
+        self.__int_type = int_type
+        self.__double_type = double_type
+        self.__buf_type = int_type
 
         try:
-            self.f = open(filename, "rb")
+            self.__f = open(filename, ds)
         except IOError as e:
             print("Error while trying to open %s", filename)
             print("IO error({0}): {1}".format(e.errno, e.strerror))
@@ -139,36 +139,94 @@ class ReadFortranBinaryFile():
         @date 2014
         @author Karl R. Leikanger.
         '''
-        self.f.close()
+        self.__f.close()
+
+    def __get_dtype(self, datatype):
+        '''
+        @param datatype Datatype 'INT', 'DOUBLE', ..., etc.
+        @return np datatype
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        options = {
+            'INT': self.__int_type,
+            'DOUBLE': self.__double_type
+        }
+        return options[datatype]
+
+
+class ReadFortranBinaryFile(FortranIO):
+    '''
+    @brief Read fortran (recordbased) binary files.
+    @date 2014
+    @author Karl R. Leikanger.
+    '''
+
+    def __init__(self, int_type, double_type, filename):
+        '''
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        super().__init__(int_type, double_type, filename, 'rb')
+        print('Reading binary file %s assuming %iB integer and %iB float.'
+              % (filename, int_type(0).nbytes, double_type(0).nbytes))
 
     def read_record(self, datatype, nread):
         '''
         @brief Read a single record from a fortran output file.
-        @param f Inputstream.
-        @param datatype Numpy datatype.
+        @param datatype Input datatype, 'INT', 'DOUBLE', ..., etc.
         @param nread Number of datatype elements to read.
         @return retvec Numpy array with read data.
         @date 2014
         @author Karl R. Leikanger.
-
         '''
-        if datatype == 'INT':
-            dtype = self.int_type
-        elif datatype == 'DOUBLE':
-            dtype = self.double_type
+        dtype = self.__get_dtype(datatype)
+        buf_type = self.__buf_type
 
-        buf_type = self.buf_type
-        f = self.f
-
-        c1 = np.fromfile(f, dtype=buf_type, count=1)[0]
-        retvec = np.fromfile(self.f, dtype=dtype, count=nread)
-        c2 = np.fromfile(self.f, dtype=buf_type, count=1)[0]
+        c1 = np.fromfile(self.__f, dtype=buf_type, count=1)[0]
+        retvec = np.fromfile(self.__f, dtype=dtype, count=nread)
+        c2 = np.fromfile(self.__f, dtype=buf_type, count=1)[0]
 
         # for record based FORTRAN output, the first and last buffer should have
         # the same value.
         if (c1 != c2):
             # TODO Detailed error message
-            print('\nError in input file. Check output format, datatypes etc.\n')
+            print('\nError input file. Check output format, datatypes etc.\n')
             exit(-1)
 
         return retvec
+
+
+class WriteFortranBinaryFile(FortranIO):
+    '''
+    @brief Write to fortran (recordbased) binary files.
+    @date 2014
+    @author Karl R. Leikanger.
+    '''
+
+    def __init__(self, int_type, double_type, filename):
+        '''
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        super().__init__(int_type, double_type, filename, 'wb')
+        print('Writing binary file %s assuming %iB integer and %iB float.'
+              % (filename, int_type(0).nbytes, double_type(0).nbytes))
+
+    def write_record(self, datatype, output):
+        '''
+        @brief Write a single record to a fortran output file.
+        @param output Output to write too file.
+        @param datatype Output datatype, 'INT', 'DOUBLE', ..., etc.
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        dtype = self.__get_dtype(datatype)
+
+        buf_type = self.__buf_type
+        op = dtype(output)
+        buf = buf_type(op.nbytes)
+
+        self.__f.write(buf)
+        self.__f.write(op)
+        self.__f.write(buf)
