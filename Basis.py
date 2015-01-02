@@ -50,11 +50,10 @@ class Basis():
         '''
         atomic_nr = ''
         ao = ''
-        tags_permutations = ''  # XXX delete ?
+        # basis = ''
 
         def __init__(self):
             self.ao = []
-            self.tags_permutations = []  # XXX delete ?
 
     class __AtomicOrbital():
         '''
@@ -75,7 +74,7 @@ class Basis():
             self.e = []
             self.c = []
 
-    def read_basisfile(self, infile_name, basis_format):
+    def read_basisfile(self, infile_name, basis_format):  # TODO atoms (a, basis)
         '''
         @brief Read a basis input file.
         @param infile_name Name of the inputfile.
