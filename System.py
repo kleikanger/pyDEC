@@ -4,6 +4,9 @@
 @author Karl R. Leikanger
 '''
 
+from IO import ReadFile
+import Parameters
+
 class System():
    '''
    @brief Stores information about reference cell atoms and lattice vectors.
@@ -25,7 +28,7 @@ class System():
       @date 2014
       @author Karl R. Leikanger
       '''
-      self.latvec = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+      self.latvec = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
       self.atoms = []
 
    class __Atom():
@@ -146,7 +149,7 @@ class System():
                atom.tag = tag
 
                words = get_words()
-               atom.a = parameters.elem_a_from_symbol.get(words[0])
+               atom.a = Parameters.elem_a_from_symbol.get(words[0])
                if atom.a is None:
                   print('Error: Input from file: %s, line %s. Element %s not\
                         in list of symbols.' % (filename, line_nr(), words[0]))
@@ -161,15 +164,15 @@ class System():
 
                self.atoms.append(atom)
 
-      for x in self.atoms:
-           print(x.basisname)
-           print(x.a)
-           print(x.position)
-           print(x.ghost)
-           print(x.charge)
-           print('\n')
-      for x in self.latvec:
-         print(x)
+      #for x in self.atoms:
+      #     print(x.basisname)
+      #     print(x.a)
+      #     print(x.position)
+      #     print(x.ghost)
+      #     print(x.charge)
+      #     print('\n')
+      #for x in self.latvec:
+      #   print(x)
 
 #system = System()
 #system.read_dalton_molfile('H2.mol')

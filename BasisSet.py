@@ -12,7 +12,7 @@ The orbitals are read from file and stored in the following format:
     -each of these have a list of coeffs (oa.c), a list of exponents (ao.e) and
     a AM quantum number (ao.l) stored.
 '''
-import parameters as param
+import Parameters as param
 from IO import ReadFile
 import numpy as np
 

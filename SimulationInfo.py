@@ -9,15 +9,12 @@ Parameters like inputfiles, the basis, latticevectors etc are stored in this
 class.
 '''
 
-# import basis
-import parameters
-from IO import ReadFile
 # import inputparam
 import sys
 import System
 
 
-class SimulationInfo():
+class SimulationInfo(): #Simulation (Change name)
     '''
     @brief
     @var
