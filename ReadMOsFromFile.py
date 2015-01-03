@@ -678,7 +678,7 @@ import sys
 #     REAL(KIND = sp), DIMENSION(:,:), POINTER :: local_data_sp
 #  END TYPE cp_fm_type
 
-from SimulationInfo import System
+from System import System
 system = System()
 system.read_system_info('N2.mol', 'LSDALTON')
 
