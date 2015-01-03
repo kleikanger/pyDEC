@@ -678,11 +678,6 @@ import sys
 #     REAL(KIND = sp), DIMENSION(:,:), POINTER :: local_data_sp
 #  END TYPE cp_fm_type
 
-from basis import Basis
-basis = Basis('STO-3G') #inp: basisname
-basis.read_basisfile('STO-3G', 'LSDALTON') #inp: inputfile, inputformat
-basis.print_basisfile('cp2k_STO-3G', 'CP2K') #inp: output filename, outputformat
-
 from SimulationInfo import System
 system = System()
 system.read_system_info('N2.mol', 'LSDALTON')
@@ -690,6 +685,11 @@ system.read_system_info('N2.mol', 'LSDALTON')
 #o = MOinfo('He_bulk2-RESTART.wfn')
 ## convert_restart_file ,,
 #o.read_restart_file_cp2k_format(system, basis)
+
+from basis import Basis
+basis = Basis()
+basis.read_basis_set('STO-3G', 'STO-3G', 'DALTON')
+basis.print_basis_sets('cp2k_STO-3G__3', 'CP2K')
 
 o = MOinfo('Ne_bulk2-RESTART.wfn')
 o.read_restart_file_cp2k_format(system, basis)
