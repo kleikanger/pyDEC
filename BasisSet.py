@@ -118,9 +118,9 @@ class BasisSet():
         '''
         @brief Set up the transformation of MO's from codeformat_to to\
             codeformat_from.
-        The pertubation of the mo's is then simple:
-            - mo = [mo[i] for i in pertubations]
-        @return The output is a list with pertubations.
+        The permutation of the mo's is then simple:
+            - mo = [mo[i] for i in permutations]
+        @return The output is a list with permutations.
         @param codeformat_from String object: ('LSDALTON', 'CP2K', ...)
         @param codeformat_to String object: ('LSDALTON', 'CP2K', ...)
         @param atoms Elements from inputfile type System.__Atom
@@ -133,30 +133,30 @@ class BasisSet():
             'cp2k': self.__get_aoorder_cp2k
         }
         try:
-            pert_from = options[codeformat_from.lower()](atoms)
-            pert_to = options[codeformat_to.lower()](atoms)
+            perm_from = options[codeformat_from.lower()](atoms)
+            perm_to = options[codeformat_to.lower()](atoms)
         except:
             print('Error in set_up_ao_order: codeformat <%s> or <%s> not \
                   supported?.' % (codeformat_to, codeformat_from))
             raise
 
-        # duplicate elements or different length of pert_to and pert_from?
-        lens = [len(set(pert_to)), len(pert_to),
-                len(set(pert_from)), len(pert_from)]
+        # duplicate elements or different length of perm_to and perm_from?
+        lens = [len(set(perm_to)), len(perm_to),
+                len(set(perm_from)), len(perm_from)]
         if min(lens) != max(lens):
             print('Error in set_up_ao_order: Something wrong with the \
-                  pertubation arrays')
+                  permutation arrays')
             raise SystemExit
 
-        pertubations = []
-        for x in pert_to:
-            pertubations.append(pert_from.index(x))
-        return pertubations
+        permutations = []
+        for x in perm_to:
+            permutations.append(perm_from.index(x))
+        return permutations
 
     def get_ao_order(self, codeformat, atoms):
         '''
         @brief Get order of AO's relative to CODENAME storage of atoms.
-        @return The output is a pertubation list.
+        @return The output is a permutation list.
         @param codeformat String object: ('LSDALTON', 'CP2K', ...)
         @param atoms Elements from inputfile type System.__Atom
         @date 2014
@@ -170,10 +170,9 @@ class BasisSet():
         try:
             return options[codeformat.lower()](atoms)
         except:
-            print('Error BasisSet:get_ao_order: codeformat <%s> or <%s> not \
-                  supported?.' % (codeformat_to, codeformat_from))
+            print('Error BasisSet:get_ao_order: codeformat <%s> not \
+                  supported?.' % (codeformat))
             raise
-
 
     def get_index_of_elem(self, atomic_nr):
         '''
@@ -464,7 +463,7 @@ class BasisSet():
     def __get_aoorder_dalton(self, atoms):
         '''
         @brief Set up the order of the a.o.'s as it is stored by the code CP2K.
-        @return The output is a list of pertubations to pyQCSlink format.
+        @return The output is a list of permutations to pyQCSlink format.
         @param atoms Elements from inputfile type System.__Atom.\
             The atoms in the system in the order they are read by the code.
         @date 2014
@@ -475,7 +474,7 @@ class BasisSet():
         m_order = {  # l : [orbitals, ...]
             0: [0],
             1: [0, 1, 2],  # x,z,y ??
-            # 2 : ? TODO find the order, see cp2k source.
+            # 2 : ? TODO FIXME find the order, see cp2k source.
         }
 
         # extend tags with px,py,pz,...
@@ -529,7 +528,7 @@ class BasisSet():
     def __get_aoorder_cp2k(self, atoms):
         '''
         @brief Set up the order of the a.o.'s as it is stored by the code CP2K.
-        @return The output is a list of pertubations to pyQCSlink order.
+        @return The output is a list of permutations to pyQCSlink order.
         @param atoms Elements from inputfile type System.__Atom.\
             The atoms in the system in the order they are read by the code.
         @date 2014
@@ -542,7 +541,7 @@ class BasisSet():
         m_order = {  # l : [orbitals, ...]
             0: [0],
             1: [1, 2, 0],  # x,z,y
-            # 2 : ? TODO find the order, see cp2k source.
+            # 2 : ? TODO FIXME find the order, see cp2k source.
         }
 
         # extend tags with px,py,pz,...
@@ -590,7 +589,7 @@ class BasisSet():
             if ao.e not in exp_unique:
                 exp_unique.append(ao.e)
 
-        # TODO? if any exponents are equal; combine exponents arrays
+        # XXX if any exponents are equal; combine exponents arrays ?
 
         indx_aos = 0
         tags = []

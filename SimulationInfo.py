@@ -10,11 +10,10 @@ class.
 '''
 
 # import inputparam
-import sys
 import System
 
 
-class SimulationInfo(): #Simulation (Change name)
+class SimulationInfo():  # Simulation (Change name)
     '''
     @brief
     @var
@@ -42,4 +41,3 @@ class SimulationInfo(): #Simulation (Change name)
 
         self.system = System()
         self.system.read(sysfile)
-

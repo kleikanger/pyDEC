@@ -5,7 +5,6 @@ DALTON. Basis sets are stored as BasisSet objects in the list Basis.basis_sets.
 @date 2014
 @author Karl R. Leikanger.
 '''
-import numpy as np
 from BasisSet import BasisSet
 
 
@@ -56,7 +55,7 @@ class Basis():
         options = {
             'dalton': '$',
             'lsdalton': '$',
-            'cp2k':'#',
+            'cp2k': '#',
         }
 
         c = options[file_format.lower()]
@@ -73,9 +72,9 @@ class Basis():
         '''
         @brief Set up the transformation of MO's from codeformat_to to\
             codeformat_from.
-        The pertubation of the mo's is then simple:
-            - mo = [mo[i] for i in pertubations]
-        @return The output is a list with pertubations.
+        The permutation of the mo's is then simple:
+            - mo = [mo[i] for i in permutations]
+        @return The output is a list with permutations.
         @param codeformat_from String object: ('LSDALTON', 'CP2K', ...)
         @param codeformat_to String object: ('LSDALTON', 'CP2K', ...)
         @param atoms Elements from inputfile type System.__Atom
@@ -88,36 +87,36 @@ class Basis():
             'cp2k': self.__get_aoorder_cp2k
         }
         try:
-            pert_from = options[codeformat_from.lower()](atoms)
-            pert_to = options[codeformat_to.lower()](atoms)
+            perm_from = options[codeformat_from.lower()](atoms)
+            perm_to = options[codeformat_to.lower()](atoms)
         except:
             print('Error in set_up_ao_order: codeformat <%s> or <%s> not \
                   supported?.' % (codeformat_to, codeformat_from))
             raise
 
-        # duplicate elements or different length of pert_to and pert_from?
-        lens = [len(set(pert_to)), len(pert_to),
-                len(set(pert_from)), len(pert_from)]
+        # duplicate elements or different length of perm_to and perm_from?
+        lens = [len(set(perm_to)), len(perm_to),
+                len(set(perm_from)), len(perm_from)]
         if min(lens) != max(lens):
             print('Error in set_up_ao_order: Something wrong with the \
-                  pertubation arrays')
+                  permutation arrays')
             raise SystemExit
 
-        # get pertubations from codeformat_from -> codeformat_to format
-        pertubations = []
-        for x in pert_to:
-            pertubations.append(pert_from.index(x))
-        return pertubations
+        # get permutations from codeformat_from -> codeformat_to format
+        permutations = []
+        for x in perm_to:
+            permutations.append(perm_from.index(x))
+        return permutations
 
     def __get_aoorder_dalton(self, atoms):
         '''
-        @brief Get pertubations from CODENAME format to DALTON format.
-        @return The list of pertubations.
+        @brief Get permutations from CODENAME format to DALTON format.
+        @return The list of permutations.
         @param atoms Elements from inputfile type System.__Atom
         @date 2014
         @author Karl R. Leikanger.
         '''
-        pertubations = []
+        permutations = []
         pmax = 0
 
         for a in atoms:
@@ -130,24 +129,24 @@ class Basis():
                         a_list += a
                 except:
                     break
-            # get pertubations and add to the list pertubations
+            # get permutations and add to the list permutations
             basis_set = self.get_basis_set(a_list[0].basisname)
             tmp = basis_set.get_ao_order('DALTON', a_list)
             tmp = [(x+pmax) for x in tmp]
             pmax += max(tmp)
-            pertubations += tmp
+            permutations += tmp
 
-        return pertubations
+        return permutations
 
     def __get_aoorder_cp2k(self, atoms):
         '''
-        @brief Get pertubations from CODENAME format to CP2K format.
-        @return The list of pertubations.
+        @brief Get permutations from CODENAME format to CP2K format.
+        @return The list of permutations.
         @param atoms Elements from inputfile type System.__Atom
         @date 2014
         @author Karl R. Leikanger.
         '''
-        pertubations = []
+        permutations = []
         pmax = 0
 
         for a in atoms:
@@ -160,14 +159,14 @@ class Basis():
                         a_list += a
                 except:
                     break
-            # get pertubations and add to the list pertubations
+            # get permutations and add to the list permutations
             basis_set = self.get_basis_set(a_list[0].basisname)
             tmp = basis_set.get_ao_order('CP2K', a_list)
             tmp = [(x+pmax) for x in tmp]
             pmax += max(tmp)
-            pertubations += tmp
+            permutations += tmp
 
-        return pertubations
+        return permutations
 
     def get_basis_set(self, basis_name):
         '''
@@ -182,15 +181,16 @@ class Basis():
                 return b
         print('Error Basis:get_basis: Basis %s not read stored in Basis object'
               % basis_name)
-
-#basis = Basis()
-#basis.read_basis_set('STO-6G', 'STO-6G', 'DALTON')
-#basis.read_basis_set('STO-3G', 'STO-3G', 'DALTON')
-#basis.print_basis_sets('cp2k_STO-6G__3', 'CP2K')
-#basis.print_basis_sets('dalton_STO-6G__3', 'DALTON')
-## basis.__get_order_of_dalton_aos_tags(self, basis.chem_elems[0])
-## print(len(basis.chem_elems))
-## for e in basis.chem_elems[int(sys.argv[1])].ao:
-##    print(e.l)
-##    print(e.c)
-##    print(e.e)
+'''
+basis = Basis()
+basis.read_basis_set('STO-6G', 'STO-6G', 'DALTON')
+basis.read_basis_set('STO-3G', 'STO-3G', 'DALTON')
+basis.print_basis_sets('cp2k_STO-6G__3', 'CP2K')
+basis.print_basis_sets('dalton_STO-6G__3', 'DALTON')
+# basis.__get_order_of_dalton_aos_tags(self, basis.chem_elems[0])
+# print(len(basis.chem_elems))
+# for e in basis.chem_elems[int(sys.argv[1])].ao:
+#    print(e.l)
+#    print(e.c)
+#    print(e.e)
+'''

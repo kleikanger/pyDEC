@@ -67,7 +67,11 @@ class FortranIO():
             'INT': self._int_type,
             'DOUBLE': self._double_type
         }
-        return options[datatype]
+        try:
+            return options[datatype]
+        except:
+            print('Error: Datatype %s not available?' % datatype)
+            raise
 
 
 class ReadFortranBinaryFile(FortranIO):
@@ -129,23 +133,30 @@ class WriteFortranBinaryFile(FortranIO):
         print('Writing binary file %s assuming %iB integer and %iB float.'
               % (filename, int_type(0).nbytes, double_type(0).nbytes))
 
-    def write_record(self, datatype, output):
+    def write_record(self, datatype_str, output, buf=True):
         '''
         @brief Write a single record to a fortran output file.
         @param output Output to write too file.
-        @param datatype Output datatype, 'INT', 'DOUBLE', ..., etc.
+        @param datatype_str Output datatype, 'INT', 'DOUBLE', ..., etc.
+        @param buf Write buffer.
         @date 2014
         @author Karl R. Leikanger.
         '''
-        dtype = self._get_dtype(datatype)
+        datatype = self._get_dtype(datatype_str)
 
-        buf_type = self._buf_type
-        op = dtype(output)
-        buf = buf_type(op.nbytes)
+        if type(output) == np.ndarray and output.dtype != datatype:
+            output = output.astype(dtype=datatype)
+        else:
+            output = np.asarray(output, dtype=datatype)
 
-        self._f.write(buf)
-        self._f.write(op)
-        self._f.write(buf)
+        if buf:
+            buf_type = self._buf_type
+            buf = buf_type(output.nbytes)
+            buf.tofile(self._f)
+            output.tofile(self._f)
+            buf.tofile(self._f)
+        else:
+            output.tofile(self._f)
 
 
 class ReadFile():
