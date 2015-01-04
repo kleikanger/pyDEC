@@ -9,7 +9,7 @@ The orbitals are read from file and stored in the following format:
     -chem_elems is an array of __ChemElemBasis objects. Contains atomic number
     (chem_elems.atomic_nr) and an list of __AtomicOrbital objects
     (chem_elems.ao),
-    -each of these have a list of coeffs (oa.c), a list of exponents (ao.e) and
+    -each of these have a list of coeffs (ao.c), a list of exponents (ao.e) and
     a AM quantum number (ao.l) stored.
 '''
 import Parameters as param
@@ -136,16 +136,17 @@ class BasisSet():
             perm_from = options[codeformat_from.lower()](atoms)
             perm_to = options[codeformat_to.lower()](atoms)
         except:
-            print('Error in set_up_ao_order: codeformat <%s> or <%s> not \
-                  supported?.' % (codeformat_to, codeformat_from))
+            print('Error in get_mo_transformation: codeformat <%s> or <%s>'
+                  % (codeformat_to, codeformat_from)
+                  + 'not supported?')
             raise
 
         # duplicate elements or different length of perm_to and perm_from?
         lens = [len(set(perm_to)), len(perm_to),
                 len(set(perm_from)), len(perm_from)]
         if min(lens) != max(lens):
-            print('Error in set_up_ao_order: Something wrong with the \
-                  permutation arrays')
+            print('Error in get_ao_order: Something wrong with the '
+                  + 'permutation arrays')
             raise SystemExit
 
         permutations = []
@@ -170,8 +171,8 @@ class BasisSet():
         try:
             return options[codeformat.lower()](atoms)
         except:
-            print('Error BasisSet:get_ao_order: codeformat <%s> not \
-                  supported?.' % (codeformat))
+            print('Error BasisSet:get_ao_order: codeformat <%s> not supported?'
+                  % (codeformat))
             raise
 
     def get_index_of_elem(self, atomic_nr):
@@ -327,46 +328,34 @@ class BasisSet():
 
         # get AO's tags sorted in dalton order
         tags = self.__get_order_of_dalton_aos_tags(elem)
-        # sort aos acc. to tags
-        # indices = [x - min(tags[:]) for x in tags]
-        # aos = [elem.ao[i] for i in indices]
         aos = [self.__get_ao_from_tag(elem, tag) for tag in tags]
 
         lsym = ['S', 'P', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
-        for l in set([ao.l for ao in aos]):
+        for l in set([ao.l for ao in aos]):  # in range(max(...
             f.write('$\n$ %s - type functions:\n' % lsym[l])
 
             # extract ao's all with the correct AM
             aos_set = [ao for ao in aos if ao.l == l]
-            # extract all 'unique' exponents arrays
+            # extract all 'unique' exponents
             exp_unique = []
             for ao in aos_set:
-                if ao.e not in exp_unique:
-                    exp_unique.append(ao.e)
+                tmp = set(ao.e).difference(set(exp_unique))
+                exp_unique += list(tmp)
+            exp_unique.sort(reverse=True)
             # get total nr of exponents
-            total_n_exp = 0
-            for eu in exp_unique:
-                total_n_exp += len(eu)
+            total_n_exp = len(exp_unique)
 
             # XXX what is the meaning os last integer?? Ask S.R.
             f.write('%i %i %i \n' % (total_n_exp, len(aos_set), 0))
 
             # organize and print exponents + coefficients
             zlists = np.zeros([total_n_exp, len(aos_set)+1], dtype=float)
-            b = 0
-            for eu in exp_unique:
-                leu = len(eu)
-                zlists[b:b+leu, 0] = eu
-                b += leu
-            k = 0
-            b = 0
-            for eu in exp_unique:
-                leu = len(eu)
-                for ao in aos_set:
-                    if ao.e == eu:
-                        zlists[b:b+leu, k+1] = aos_set[k].c
-                        k += 1
-                b += leu
+            zlists[:, 0] = exp_unique
+            for b in range(len(exp_unique)):
+                for k in range(len(aos_set)):
+                    for i in range(len(aos_set[k].e)):
+                        if aos_set[k].e[i] == exp_unique[b]:
+                            zlists[b, k+1] = aos_set[k].c[i]
             for i in range(zlists.shape[0]):
                 for j in range(zlists.shape[1]):
                     ostr = str(zlists[i, j]).ljust(14)
@@ -432,12 +421,12 @@ class BasisSet():
             c_l = []
             tmp = []
             ltmp = lmin
-            for j in range(lmax-lmin+1):
+            for j in range(len(aos_set)):
+                tmp.append(aos_set[j].c)
                 if aos_set[j].l != ltmp:
                     c_l.append(tmp)
                     tmp = []
                     ltmp += 1
-                tmp.append(aos_set[j].c)
             c_l.append(tmp)
 
             # get number of elements with each A.M.
@@ -474,7 +463,9 @@ class BasisSet():
         m_order = {  # l : [orbitals, ...]
             0: [0],
             1: [0, 1, 2],  # x,z,y ??
-            # 2 : ? TODO FIXME find the order, see cp2k source.
+            2: [0, 1, 2, 3, 4],  # ? TODO FIXME
+            3: [0, 1, 2, 3, 4, 5, 6]  # ? TODO FIXME
+            # ? TODO FIXME find the order, see cp2k source.
         }
 
         # extend tags with px,py,pz,...
@@ -482,7 +473,6 @@ class BasisSet():
         ao_list = []
         listtot = 0
         for atom in atoms:
-            # add func for several basis sets.
             elem = self.get_chem_elem(atom.a)  # atom.a = Atomic Number
             tags = self.__get_order_of_dalton_aos_tags(elem)
             order = tags.copy()
@@ -490,14 +480,14 @@ class BasisSet():
             for i in range(len(tags)):
                 j += 1
                 ao = self.__get_ao_from_tag(elem, tags[i])
-                tmp = [(tags[i] + x) for x in m_order[ao.l]]
+                tmp = [(order[j] + x) for x in m_order[ao.l]]
                 for k in range(len(order)):
                     if order[k] > order[j]:
                         order[k] += len(tmp)-1
                 order[j] = tmp[0]
                 for k in range(len(tmp)-1):
-                    order.insert(i+1, tmp[-1-k])
-                    j += 1
+                    order.insert(j+1, tmp[-1-k])
+                j += len(tmp)-1
             ao_list += [(x + listtot) for x in order]
             listtot += max(order)
         return ao_list
@@ -541,7 +531,9 @@ class BasisSet():
         m_order = {  # l : [orbitals, ...]
             0: [0],
             1: [1, 2, 0],  # x,z,y
-            # 2 : ? TODO FIXME find the order, see cp2k source.
+            2: [0, 1, 2, 3, 4],  # ? TODO FIXME
+            3: [0, 1, 2, 3, 4, 5, 6]  # ? TODO FIXME
+            # ? TODO FIXME find the order, see cp2k source.
         }
 
         # extend tags with px,py,pz,...
@@ -549,24 +541,21 @@ class BasisSet():
         ao_list = []
         listtot = 0
         for atom in atoms:
-            # add func for several basis sets.
             elem = self.get_chem_elem(atom.a)  # atom.a = Atomic Number
-            tags, n = self.__get_order_of_CP2K_aos_tags(elem)
-
+            tags = self.__get_order_of_CP2K_aos_tags(elem)[0]
             order = tags.copy()
             j = -1
-
             for i in range(len(tags)):
                 j += 1
                 ao = self.__get_ao_from_tag(elem, tags[i])
-                tmp = [(tags[i] + x) for x in m_order[ao.l]]
+                tmp = [(order[j] + x) for x in m_order[ao.l]]
                 for k in range(len(order)):
                     if order[k] > order[j]:
                         order[k] += len(tmp)-1
                 order[j] = tmp[0]
                 for k in range(len(tmp)-1):
-                    order.insert(i+1, tmp[-1-k])
-                    j += 1
+                    order.insert(j+1, tmp[-1-k])
+                j += len(tmp)-1  # XXX -1??
             ao_list += [(x + listtot) for x in order]
             listtot += max(order)
         return ao_list

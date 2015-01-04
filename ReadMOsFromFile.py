@@ -76,7 +76,7 @@ class MOinfo():
         # Read general info.
         [i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax]\
             = read_record('INT', 5)
-        print([i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax])
+        #print([i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax])
         nsetinfo = read_record('INT', i_natom)
         nshell_info = read_record('INT', i_nsetmax*i_natom)
         nshell_info.reshape(i_nsetmax, i_natom)
@@ -151,10 +151,10 @@ class MOinfo():
 
                     # NB: this is a numpy matrix.
                     dd_vecbuff = read_record('DOUBLE', i_nao)
-                    print(dd_vecbuff)
+                    #print(dd_vecbuff)
                     #dd_vecbuff = [dd_vecbuff[j] for j in permutations]
                     dd_vecbuff = dd_vecbuff[permutations]
-                    print(dd_vecbuff)
+                    #print(dd_vecbuff)
 
                     ostream.write_record('DOUBLE', dd_vecbuff, buf=False)
 
@@ -181,7 +181,7 @@ class MOinfo():
 
 
 
-
+'''
 from System import System
 system = System()
 system.read_system_info('N2.mol', 'LSDALTON')
@@ -192,10 +192,24 @@ system.read_system_info('N2.mol', 'LSDALTON')
 
 from basis import Basis
 basis = Basis()
-basis.read_basis_set('STO-3G', 'STO-3G', 'DALTON')
-basis.print_basis_sets('cp2k_STO-3G__3', 'CP2K')
+basis.read_basis_set('aug-cc-pVTZ', 'aug-cc-pVTZ', 'DALTON')
+basis.read_basis_set('STO-6G', 'STO-6G', 'DALTON')
+#basis.print_basis_sets('cp2k_STO-3G__3', 'CP2K')
 
-o = MOinfo('Ne_bulk2-RESTART.wfn')
-o.read_restart_file_cp2k_format(system, basis)
-print('ao order DALTON')
+s = system
+for x in s.atoms:
+    print('basis: ' + x.basisname, end=', ')
+    print('a: %s' % x.a, end=' ')
+    print('pos:', end=' '); print(x.position, end=', ')
+    print('ghost: %s' % x.ghost, end=', ')
+    print('charge: %s' % x.charge, end='\n')
+    print('latvec:')
+    for x in s.latvec:
+        print(x)
+
 print(basis.get_mo_transformation('CP2K', 'DALTON', system.atoms))
+'''
+# o = MOinfo('Ne_bulk2-RESTART.wfn')
+# o.read_restart_file_cp2k_format(system, basis)
+# print('ao order DALTON')
+# print(basis.get_mo_transformation('CP2K', 'DALTON', system.atoms))

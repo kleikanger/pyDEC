@@ -102,7 +102,8 @@ class System():
             elif tmp[0].lower() == 'atomtypes':
                 self.atomtypes = int(tmp[1])
             else:
-                print('Error: Invalid keyword <%s> in line %i of file: %s.'
+                print('Error: Something wrong with the .mol file\n'
+                      + 'Invalid keyword <%s> in line %i of file: %s.'
                       % (tmp[0], line_nr(), filename))
                 raise SystemExit
 
@@ -120,9 +121,10 @@ class System():
                     natoms = int(tmp[1])
                 elif tmp[0].lower() == 'basis':
                     if not self.atombasis:
-                        print('Error: Atombasis is not set in file: %s => \
-                              Basis is not a valid keyword in line %i'
-                              % (filename, line_nr()))
+                        print('Error: Atombasis is not set in file: %s'
+                              % filename
+                              + 'Basis is not a valid keyword in line %i'
+                              % line_nr())
                         raise SystemExit
                     basis = tmp[1]
                 elif tmp[0].lower() in ['a1', 'a2', 'a3']:
@@ -141,34 +143,35 @@ class System():
                           % (tmp[0], line_nr(), filename))
                     raise SystemExit
 
-                # check that all param are set: basis, natom, ...
+            # check that all param are set: basis, natom, ...
 
-                # read atoms symbol xpos ypos zpos
-                for i in range(natoms):
+            # read atoms symbol xpos ypos zpos
+            for i in range(natoms):
 
-                    atom = self.__Atom()
-                    atom.basisname = basis
-                    atom.charge = charge
+                atom = self.__Atom()
+                atom.basisname = basis
+                atom.charge = charge
 
-                    tag += 1
-                    atom.tag = tag
+                tag += 1
+                atom.tag = tag
 
-                    words = get_words()
-                    atom.a = Parameters.elem_a_from_symbol.get(words[0])
-                    if atom.a is None:
-                        print('Error: Input from file: %s, line %s. Element %s\
-                              not in list of symbols.'
-                              % (filename, line_nr(), words[0]))
-                        exit(0)
-                    try:
-                        atom.position = [float(x) for x in words[1:]]
-                    except:
-                        print('Error: Input from file: %s, line %s.\
-                            Cannot read atom coords.' % (filename, line_nr()))
-                        raise
-                    atom.ghost = False
+                words = get_words()
+                atom.a = Parameters.elem_a_from_symbol.get(words[0])
+                if atom.a is None:
+                    print('Error: Input from file: %s, line %s. Element %s'
+                          % (filename, line_nr(), words[0])
+                          + 'not in list of symbols.')
+                    exit(0)
+                try:
+                    atom.position = [float(x) for x in words[1:]]
+                except:
+                    print('Error: Input from file: %s, line %s.'
+                          % (filename, line_nr())
+                          + 'Cannot read atom coords.')
+                    raise
+                atom.ghost = False
 
-                    self.atoms.append(atom)
+                self.atoms.append(atom)
 
         # for x in self.atoms:
         #      print(x.basisname)

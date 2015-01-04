@@ -47,7 +47,7 @@ class Basis():
         @date 2014
         @author Karl R. Leikanger.
         '''
-        print('Writing basis set to file <%s> in <%s> format.'
+        print('Writing basis sets to file <%s> in <%s> format.'
               % (file_name, file_format))
         f = open(file_name, 'w')
 
@@ -64,6 +64,7 @@ class Basis():
 
         for basis_set in self.basis_sets:
             basis_set.print_basisfile(file_format, f)
+            print('Basis set <%s> written to file.' % basis_set.basis_name)
 
         f.close()
 
@@ -90,16 +91,18 @@ class Basis():
             perm_from = options[codeformat_from.lower()](atoms)
             perm_to = options[codeformat_to.lower()](atoms)
         except:
-            print('Error in set_up_ao_order: codeformat <%s> or <%s> not \
-                  supported?.' % (codeformat_to, codeformat_from))
+            print('Error in get_mo_transformation: '
+                  + 'codeformat <%s> or <%s> not supported?'
+                  % (codeformat_to, codeformat_from))
             raise
 
         # duplicate elements or different length of perm_to and perm_from?
         lens = [len(set(perm_to)), len(perm_to),
                 len(set(perm_from)), len(perm_from)]
+
         if min(lens) != max(lens):
-            print('Error in set_up_ao_order: Something wrong with the \
-                  permutation arrays')
+            print('Error in set_up_ao_order: Something wrong with the '
+                  + 'permutation arrays')
             raise SystemExit
 
         # get permutations from codeformat_from -> codeformat_to format
@@ -119,22 +122,24 @@ class Basis():
         permutations = []
         pmax = 0
 
-        for a in atoms:
+        i = 0
+        while i < len(atoms):
             # collect all subsequent atoms with the same basis_set
-            a_list = [a]
-            bsstr = a.basisname
-            while True:
-                try:
-                    if next(a).basis_set == bsstr:
-                        a_list += a
-                except:
+            a_list = [atoms[i]]
+            bsstr = atoms[i].basisname
+            while i < len(atoms) - 1:
+                a = atoms[i+1]
+                if a.basisname == bsstr:
+                    a_list += [a]
+                    i += 1
+                else:
                     break
             # get permutations and add to the list permutations
-            basis_set = self.get_basis_set(a_list[0].basisname)
+            basis_set = self.get_basis_set(bsstr)
             tmp = basis_set.get_ao_order('DALTON', a_list)
-            tmp = [(x+pmax) for x in tmp]
+            permutations += [(x+pmax) for x in tmp]
             pmax += max(tmp)
-            permutations += tmp
+            i += 1
 
         return permutations
 
@@ -148,23 +153,24 @@ class Basis():
         '''
         permutations = []
         pmax = 0
-
-        for a in atoms:
+        i = 0
+        while i < len(atoms):
             # collect all subsequent atoms with the same basis_set
-            a_list = [a]
-            bsstr = a.basisname
-            while True:
-                try:
-                    if next(a).basis_set == bsstr:
-                        a_list += a
-                except:
+            a_list = [atoms[i]]
+            bsstr = atoms[i].basisname
+            while i < len(atoms) - 1:
+                a = atoms[i+1]
+                if a.basisname == bsstr:
+                    a_list += [a]
+                    i += 1
+                else:
                     break
             # get permutations and add to the list permutations
-            basis_set = self.get_basis_set(a_list[0].basisname)
+            basis_set = self.get_basis_set(bsstr)
             tmp = basis_set.get_ao_order('CP2K', a_list)
-            tmp = [(x+pmax) for x in tmp]
+            permutations += [(x+pmax) for x in tmp]
             pmax += max(tmp)
-            permutations += tmp
+            i += 1
 
         return permutations
 
