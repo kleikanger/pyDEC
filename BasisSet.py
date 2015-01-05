@@ -154,12 +154,13 @@ class BasisSet():
             permutations.append(perm_from.index(x))
         return permutations
 
-    def get_ao_order(self, codeformat, atoms):
+    def get_ao_order(self, codeformat, atom):
         '''
-        @brief Get order of AO's relative to CODENAME storage of atoms.
+        @brief Get order of AO's (list of permutations) for one atom relative to \
+            the order that CODENAME stores then atoms.
         @return The output is a permutation list.
         @param codeformat String object: ('LSDALTON', 'CP2K', ...)
-        @param atoms Elements from inputfile type System.__Atom
+        @param atom Atom object of class System.__Atom
         @date 2014
         @author Karl R. Leikanger.
         '''
@@ -169,7 +170,7 @@ class BasisSet():
             'cp2k': self.__get_aoorder_cp2k
         }
         try:
-            return options[codeformat.lower()](atoms)
+            return options[codeformat.lower()](atom)
         except:
             print('Error BasisSet:get_ao_order: codeformat <%s> not supported?'
                   % (codeformat))
@@ -327,7 +328,7 @@ class BasisSet():
         f.write('A %i\n' % elem.atomic_nr)
 
         # get AO's tags sorted in dalton order
-        tags = self.__get_order_of_dalton_aos_tags(elem)
+        tags = self.__get_order_of_dalton_atomic_basisset_tags(elem)
         aos = [self.__get_ao_from_tag(elem, tag) for tag in tags]
 
         lsym = ['S', 'P', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
@@ -387,7 +388,7 @@ class BasisSet():
             - A.M (within each exponents array).
         '''
         # tags of the
-        tags, n_unique_exp = self.__get_order_of_CP2K_aos_tags(elem)
+        tags, n_unique_exp = self.__get_order_of_CP2K_atomic_basisset_tags(elem)
 
         # print Element symbol Name of the basis set  Alias names
         elem_symbol = param.elem_symbol_from_a.get(elem.atomic_nr)
@@ -449,50 +450,51 @@ class BasisSet():
                         f.write('%s ' % ostr)
                 f.write('\n')
 
-    def __get_aoorder_dalton(self, atoms):
+    def __get_aoorder_dalton(self, atom):
         '''
-        @brief Set up the order of the a.o.'s as it is stored by the code CP2K.
-        @return The output is a list of permutations to pyQCSlink format.
-        @param atoms Elements from inputfile type System.__Atom.\
-            The atoms in the system in the order they are read by the code.
+        @brief Set up the order of the a.o.'s for one elements as it\
+            is stored by the code DALTON.
+        @return The output is a list of permutations to CODENAME format.
+        @param atom Atom object of class System.__Atom.
         @date 2014
         @author Karl R. Leikanger.
         '''
-        # How is the orbitals ordered for a given l?
-        # l=1:px,py,px l=2:pxy,pxz,pyz,p(xx-yy),pzz etc..
+        # m_order: How is the orbitals ordered for a given l?
+        # see: LSDALTON 2013 manual.
+        # ex:  {1: [0, 1, 2]} is l=1, m=-1,0,1 (ordered after m for the solid
+        # harmonics).
+        # ex2:
+        #  -  {1: [0, 1, 2]} => py, pz, px
+        #  -  {1: [2, 0, 1]} => px, py, pz
+        # ...
         m_order = {  # l : [orbitals, ...]
             0: [0],
-            1: [0, 1, 2],  # x,z,y ??
-            2: [0, 1, 2, 3, 4],  # ? TODO FIXME
-            3: [0, 1, 2, 3, 4, 5, 6]  # ? TODO FIXME
-            # ? TODO FIXME find the order, see cp2k source.
+            1: [2, 0, 1],
         }
+        for i in range(2, 25):  # 25 = highest L q.n.
+            m_order.update({i: [x for x in range(2 * i + 1)]})
 
         # extend tags with px,py,pz,...
         # and append tagslists of different atoms.
-        ao_list = []
-        listtot = 0
-        for atom in atoms:
-            elem = self.get_chem_elem(atom.a)  # atom.a = Atomic Number
-            tags = self.__get_order_of_dalton_aos_tags(elem)
-            order = tags.copy()
-            j = -1
-            for i in range(len(tags)):
-                j += 1
-                ao = self.__get_ao_from_tag(elem, tags[i])
-                tmp = [(order[j] + x) for x in m_order[ao.l]]
-                for k in range(len(order)):
-                    if order[k] > order[j]:
-                        order[k] += len(tmp)-1
-                order[j] = tmp[0]
-                for k in range(len(tmp)-1):
-                    order.insert(j+1, tmp[-1-k])
-                j += len(tmp)-1
-            ao_list += [(x + listtot) for x in order]
-            listtot += max(order)
-        return ao_list
+        elem = self.get_chem_elem(atom.a)
+        tags = self.__get_order_of_dalton_atomic_basisset_tags(elem)
+        order = tags.copy()
+        j = -1
+        for i in range(len(tags)):
+            j += 1
+            ao = self.__get_ao_from_tag(elem, tags[i])
+            tmp = [(order[j] + x) for x in m_order[ao.l]]
+            for k in range(len(order)):
+                if order[k] > order[j]:
+                    order[k] += len(tmp)-1
+            order[j] = tmp[0]
+            for k in range(len(tmp)-1):
+                order.insert(j+1, tmp[-1-k])
+            j += len(tmp)-1
 
-    def __get_order_of_dalton_aos_tags(self, elem):
+        return order
+
+    def __get_order_of_dalton_atomic_basisset_tags(self, elem):
         '''
         @brief Set up the order of the a.o.'s as it is read by the code DALTON.
         @param atoms Elements from inputfile type System.__Atom
@@ -515,52 +517,50 @@ class BasisSet():
 
         return tags
 
-    def __get_aoorder_cp2k(self, atoms):
+    def __get_aoorder_cp2k(self, atom):
         '''
-        @brief Set up the order of the a.o.'s as it is stored by the code CP2K.
+        @brief Set up the order of the a.o.'s for one elements as it\
+            is stored by the code CP2K.
         @return The output is a list of permutations to pyQCSlink order.
-        @param atoms Elements from inputfile type System.__Atom.\
+        @param atom Atom object of class System.__Atom.\
             The atoms in the system in the order they are read by the code.
         @date 2014
         @author Karl R. Leikanger.
         '''
         # see a cp2k/cp2k/src/atoms_imput.F
 
-        # How is the orbitals ordered for a given l
-        # l=1:px,py,px l=2:pxy,pxz,pyz,p(xx-yy),pzz etc..
-        m_order = {  # l : [orbitals, ...]
-            0: [0],
-            1: [1, 2, 0],  # x,z,y
-            2: [0, 1, 2, 3, 4],  # ? TODO FIXME
-            3: [0, 1, 2, 3, 4, 5, 6]  # ? TODO FIXME
-            # ? TODO FIXME find the order, see cp2k source.
-        }
+        # m_order: How is the orbitals ordered for a given l?
+        # ex:  {1: [0, 1, 2]} is l=1, m=-1,0,1 (ordered after m for the solid
+        # harmonics).
+        # ex2:
+        #  -  {1: [0, 1, 2]} => px, pz, py
+        #  -  {1: [2, 0, 1]} => px, py, pz
+        # ...
+        m_order = dict()
+        for i in range(0, 25):  # 25 = highest L q.n.
+            m_order.update({i: [x for x in range(2 * i + 1)]})
 
         # extend tags with px,py,pz,...
         # and append tagslists of different atoms.
-        ao_list = []
-        listtot = 0
-        for atom in atoms:
-            elem = self.get_chem_elem(atom.a)  # atom.a = Atomic Number
-            tags = self.__get_order_of_CP2K_aos_tags(elem)[0]
-            order = tags.copy()
-            j = -1
-            for i in range(len(tags)):
-                j += 1
-                ao = self.__get_ao_from_tag(elem, tags[i])
-                tmp = [(order[j] + x) for x in m_order[ao.l]]
-                for k in range(len(order)):
-                    if order[k] > order[j]:
-                        order[k] += len(tmp)-1
-                order[j] = tmp[0]
-                for k in range(len(tmp)-1):
-                    order.insert(j+1, tmp[-1-k])
-                j += len(tmp)-1  # XXX -1??
-            ao_list += [(x + listtot) for x in order]
-            listtot += max(order)
-        return ao_list
+        elem = self.get_chem_elem(atom.a)
+        tags = self.__get_order_of_CP2K_atomic_basisset_tags(elem)[0]
+        order = tags.copy()
+        j = -1
+        for i in range(len(tags)):
+            j += 1
+            ao = self.__get_ao_from_tag(elem, tags[i])
+            tmp = [(order[j] + x) for x in m_order[ao.l]]
+            for k in range(len(order)):
+                if order[k] > order[j]:
+                    order[k] += len(tmp)-1
+            order[j] = tmp[0]
+            for k in range(len(tmp)-1):
+                order.insert(j+1, tmp[-1-k])
+            j += len(tmp)-1
 
-    def __get_order_of_CP2K_aos_tags(self, elem):
+        return order
+
+    def __get_order_of_CP2K_atomic_basisset_tags(self, elem):
         '''
         @brief Set up the order of the a.o.'s as it is read by the code CP2K.
         @param atoms Elements from inputfile type System.__Atom

@@ -118,28 +118,17 @@ class Basis():
         @param atoms Elements from inputfile type System.__Atom
         @date 2014
         @author Karl R. Leikanger.
+
+        SEE: Lsdalton manual for explanation.
         '''
         permutations = []
         pmax = 0
-
-        i = 0
-        while i < len(atoms):
-            # collect all subsequent atoms with the same basis_set
-            a_list = [atoms[i]]
-            bsstr = atoms[i].basisname
-            while i < len(atoms) - 1:
-                a = atoms[i+1]
-                if a.basisname == bsstr:
-                    a_list += [a]
-                    i += 1
-                else:
-                    break
-            # get permutations and add to the list permutations
-            basis_set = self.get_basis_set(bsstr)
-            tmp = basis_set.get_ao_order('DALTON', a_list)
+        for a in atoms:
+            # get permutations for atom and add to the list of permutations
+            basis_set = self.get_basis_set(a.basisname)
+            tmp = basis_set.get_ao_order('DALTON', a)
             permutations += [(x+pmax) for x in tmp]
             pmax += max(tmp)
-            i += 1
 
         return permutations
 
@@ -153,24 +142,12 @@ class Basis():
         '''
         permutations = []
         pmax = 0
-        i = 0
-        while i < len(atoms):
-            # collect all subsequent atoms with the same basis_set
-            a_list = [atoms[i]]
-            bsstr = atoms[i].basisname
-            while i < len(atoms) - 1:
-                a = atoms[i+1]
-                if a.basisname == bsstr:
-                    a_list += [a]
-                    i += 1
-                else:
-                    break
-            # get permutations and add to the list permutations
-            basis_set = self.get_basis_set(bsstr)
-            tmp = basis_set.get_ao_order('CP2K', a_list)
+        for a in atoms:
+            # get permutations for atom and add to the list of permutations
+            basis_set = self.get_basis_set(a.basisname)
+            tmp = basis_set.get_ao_order('CP2K', a)
             permutations += [(x+pmax) for x in tmp]
             pmax += max(tmp)
-            i += 1
 
         return permutations
 
@@ -185,8 +162,9 @@ class Basis():
         for b in self.basis_sets:
             if b.basis_name == basis_name:
                 return b
-        print('Error Basis:get_basis: Basis %s not read stored in Basis object'
+        print('Error Basis:get_basis_set: Basis %s not stored in Basis object.'
               % basis_name)
+        raise SystemExit
 '''
 basis = Basis()
 basis.read_basis_set('STO-6G', 'STO-6G', 'DALTON')
