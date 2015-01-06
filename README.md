@@ -66,10 +66,7 @@ Basis set <STO-6G> written to file.
 ```
 
 Results:
-
-'''python
->> !head -n26 STO-3G
-'''
+- STO-3G:
 ```
 $Basis = STO-3G
 $
@@ -98,9 +95,8 @@ $ S-TYPE FUNCTIONS
 A 2
 ```
 
-```python
->> !head -n17 STO_3G+STO_6G
-```
+- STO_3G+STO_6G:
+
 ```
 #
  # CP2K input file.
