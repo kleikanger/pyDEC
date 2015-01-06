@@ -391,10 +391,11 @@ transformMOS.py:
  o.transform_cp2k_to_dalton()
 ```
 
-We then run LSDALTON with the following input to calculate the molecular
-orbitals 
+- We then run LSDALTON with the following input to calculate locatized orbitals
+
 ```python
->> ~cat LSDALTON.INP  # LSDALTON input
+>> !cat LSDALTON.INP  # LSDALTON input
+```
 
 ```
  **WAVE FUNCTION
