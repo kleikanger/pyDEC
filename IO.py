@@ -137,7 +137,7 @@ class WriteFortranBinaryFile(FortranIO):
         print('Writing binary file %s.' % filename)
 
     def write_record(self, datatype_str, output, buf=True,\
-                     print_to_screen=false):
+                     print_to_screen=False):
         '''
         @brief Write a single record to a fortran output file.
         @param output Output to write too file.
