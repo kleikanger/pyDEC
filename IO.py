@@ -136,12 +136,14 @@ class WriteFortranBinaryFile(FortranIO):
         # FortranIO.__init__(self, int_type, double_type, filename, 'wb')
         print('Writing binary file %s.' % filename)
 
-    def write_record(self, datatype_str, output, buf=True):
+    def write_record(self, datatype_str, output, buf=True,\
+                     print_to_screen=false):
         '''
         @brief Write a single record to a fortran output file.
         @param output Output to write too file.
         @param datatype_str Output datatype, 'INT', 'DOUBLE', ..., etc.
-        @param buf Write buffer.
+        @param buf Write buffer?
+        @param print_to_screen Print to screen?
         @date 2014
         @author Karl R. Leikanger.
         '''
@@ -167,14 +169,17 @@ class WriteFortranBinaryFile(FortranIO):
             self._f.write(buf)
             #buf.tofile(self._f)
 
-            print(buf)
-            print(output)
-            print(buf)
+            if print_to_screen:
+                print(buf)
+                print(output)
+                print(buf)
         else:
             for o in output:
                 self._f.write(o)
             # output.tofile(self._f)
-            print(output)
+
+            if print_to_screen:
+                print(output)
 
 
 class ReadFile():
