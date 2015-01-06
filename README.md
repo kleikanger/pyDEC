@@ -1,4 +1,4 @@
-pyDEC
+<CODENAME>
 =====
 
 The aim of this code is to perform DEC calculations on systems with periodic boundary conditions.
@@ -326,4 +326,4 @@ orbitals (LSDALTON.INP)
  1 1
  .Only Loc
  *END OF INPUT
-'''
+```
