@@ -33,7 +33,7 @@ Functionality
 Porting basis files:
 --------------------
 
-Example: Basis STO-6G from DALTON to CP2K format.
+Example: Read basis sets STO-3G and STO-6G from DALTON to CP2K format.
 
 ```python
 >> from basis import Basis
@@ -47,7 +47,8 @@ Reading basis from: STO-6G
 ```
 
 The basis sets 'STO-3G' and 'STO-6G' is now stored in the Basis object
-in a list of BasisSet objects. In the next line we write to file.
+in a list of BasisSet objects. In the next line we write them to file in 
+CP2K format.
 
 ```python
 >> basis.print_basis_sets('STO_3G+STO_6G', 'CP2K')  # inp: output filename, format
@@ -204,8 +205,8 @@ We use different basis sets for the atoms.
 ```
 ```
  ATOMBASIS
- LDA molecular hessian without symmetry
- Ethane LDA molecular hessian without symmetry
+ 
+
  Atomtypes=1 Charge=0 angstrom 
  charge=10.    atoms=1    basis=aug-cc-pVTZ
  Ne     0.50000000000      0.0000000000     0.0000000000
@@ -284,7 +285,8 @@ We have the files:
 -  Molecular calculation with CP2K:
   -  Add the keyword ...:DFT:ADDED\_MOS 44 to the
    CP2K input. This keyword is needed to calculate virtual MO's (2 occ +
-   44 virt in this case) and write them to restart.
+   44 virt in this case) and write them to restart. The default is to only 
+	print the occupied orbitals.
   -  Run CP2K to get the restart file He\_bulk2-RESTART.wfn.
 
 ```python
@@ -371,7 +373,8 @@ We have the files:
 &END FORCE_EVAL
 ```
 
-- To transform MO's to dalton format we run the transfomMOs.py script.
+- To transform MO's to dalton format we run the transfomMOs.py script (parsed below). 
+	The result is the DALTON input file orbitals_in.u.
 
 transformMOS.py:
 ```python
