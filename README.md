@@ -30,13 +30,6 @@ Functionality
    -  DALTON
    -  CP2K (not implemented)
 
-```python
->> cd ~/Dropbox/phd/pyCode/pyDEC/
-```
-```
-/Users/leik/Dropbox/phd/pyCode/pyDEC
-```
-
 Porting basis files:
 --------------------
 
@@ -174,9 +167,12 @@ Result:
 Manipulating the MO's
 ---------------------
 
-class MOs: - Read MO's from CP2K file. - Permute to DALTON format. -
-Print to DALTON input file.
+class MOs functionality sofar: 
+- Read MO's from CP2K file. 
+- Permute to DALTON format. 
+- Print to DALTON input file.
 
+Example:
 ```python
 >> from MOs import MOs
 >> o = MOs('Ne_bulk2-RESTART.wfn', s, basis)  # inp: input file (CP2K restart file)
@@ -199,12 +195,12 @@ found by calling:
     [0, 1]
 ```
 
-##Example with several basis sets:
+###Example with several basis sets:
 
 We use different basis sets for the atoms.
 
 ```python
->> !cat N2.mol
+>> !cat N2.mol  # the DALTON input file 
 ```
 ```
  ATOMBASIS
@@ -247,47 +243,135 @@ The permutations from CP2K to DALTON MOs:
 >> print(basisN2.get_mo_transformation('CP2K', 'DALTON', systemN2.atoms))
 ```
 ```
- [44, 45, 35, 7, 3, 43, 41, 42, 27, 25, 26, 6, 4, 5, 2, 0, 1, 36, 37, 38, 39, 40, 20, 21, 22, 23, 24, 8, 9, 10, 11, 12, 28, 29, 30, 31, 32, 33, 34, 13, 14, 15, 16, 17, 18, 19, 50, 46, 49, 47, 48]
+ [44, 45, 35, 7, 3, 43, 41, 42, 27, 25, 26, 6, 4, 5, 2, 0, 1, 36, 37, 38, 39, 40, 
+20, 21, 22, 23, 24, 8, 9, 10, 11, 12, 28, 29, 30, 31, 32, 33, 34, 13, 14, 15, 16, 
+17, 18, 19, 50, 46, 49, 47, 48]
 ```
 
-PS: Have printed the basis sets and manually checked that this is
+PS: Have printed the basis sets and manually checked that the permutation array is
 correct.
 
 Port MO's from CP2K to DALTON:
 ------------------------------
 
 We have the files:
-
+```python
+>> ls
+```
 ```
  CP2K_aug-cc-pvZT      MOLECULE.INP          t_c_g.dat
  He2.mol               aug-cc-pVTZ           transformMOS.py
  He_bulk2-RESTART.wfn  localized_orbitals.u
  LSDALTON.INP          orbitals_in.u
 ```
-
-We look at the system (MOLECULE.INP):
-
+```python
+>>> !cat MOLECULE.INP  # The  Dalton input
+```
 ```
  BASIS
  aug-cc-pVTZ
+
+
  Atomtypes=1
  Charge=2. Atoms=2
  He     0.50000000000      0.0000000000     0.0000000000
  He     -0.50000000000      0.0000000000     0.0000000000
 ```
 
--  We first run our code to generate the basis set input. NB: It is a
-   good idea to generate both CP2K and DALTON files to make sure that
-   the order of the orbitals is correct. The ao's does not need to be
-   set up in any certain order, and this could result in wrong
-   MO'permutation arrays because of the way the code is set up.
+-  Run LSDALTON to generate the basis set input. NB: generate both 
+	CP2K and DALTON files to make sure that the order of the orbitals 
+	is correct. Otherwise we could get the wrong MO'permutation arrays.
 -  Molecular calculation with CP2K:
--  Note that we need to add the keyword ...:DFT:ADDED\_MOS 44 to the
+  -  Add the keyword ...:DFT:ADDED\_MOS 44 to the
    CP2K input. This keyword is needed to calculate virtual MO's (2 occ +
-   44 virt) and write them to restart.
--  We run CP2K to get the restart file He\_bulk2-RESTART.wfn from the
-   CP2K simulation.
--  To transform MO's to dalton format we run the transfomMOs.py script.
+   44 virt in this case) and write them to restart.
+  -  Run CP2K to get the restart file He\_bulk2-RESTART.wfn.
+
+```python
+>> !cat He2.inp  # CP2K input
+```
+```
+&GLOBAL
+  PROJECT He_bulk2
+  RUN_TYPE ENERGY
+  PRINT_LEVEL LOW
+&END GLOBAL
+&FORCE_EVAL
+  METHOD QS
+  &SUBSYS
+    &KIND He
+      ELEMENT   He
+      BASIS_SET aug-cc-pVTZ 
+      POTENTIAL GTH-PADE-q2
+    &END KIND
+    &CELL
+		PERIODIC NONE
+      A     10.00    0.000000000    0.000000000
+      B     0.000000000    10.00    0.000000000
+      C     0.000000000    0.000000000    10.00
+    &END CELL
+    &COORD
+      He    0.5000000000    0.000000000    0.000000000
+      He    -0.500000000    0.000000000    0.000000000    
+    &END COORD
+  &END SUBSYS
+  &DFT
+	 BASIS_SET_FILE_NAME CP2K_aug-cc-pvZT
+    &MGRID
+      NGRIDS 4
+      CUTOFF 300
+      REL_CUTOFF 60
+    &END MGRID
+    &XC
+		&XC_FUNCTIONAL NONE
+		&END XC_FUNCTIONAL
+      &HF 
+			FRACTION 1.0
+			&SCREENING 
+				EPS_SCHWARZ 1.00000000E-10
+			&END SCREENING
+			&INTERACTION_POTENTIAL
+				POTENTIAL_TYPE MIX_CL_TRUNC	
+				CUTOFF_RADIUS 1.0
+				T_C_G_DATA t_c_g.dat
+			&END INTERACTION_POTENTIAL
+      &END HF
+    &END XC
+    &SCF
+		ADDED_MOS 44
+      SCF_GUESS ATOMIC
+      EPS_SCF 1.0E-7
+      MAX_SCF 300
+      &DIAGONALIZATION  ON
+        ALGORITHM STANDARD
+      &END DIAGONALIZATION
+      &MIXING  T
+        METHOD BROYDEN_MIXING
+        ALPHA 0.4
+        NBROYDEN 8
+      &END MIXING
+    &END SCF
+  	 &PRINT
+	 	&AO_MATRICES
+      	KOHN_SHAM_MATRIX 
+			FILENAME .\ksmatrix
+    	&END AO_MATRICES
+		&MO_CUBES
+			NHOMO -1
+			NLUMO -1
+			WRITE_CUBE .TRUE.
+			FILENAME ./mocube.out
+		&END MO_CUBES
+	&END PRINT
+  &END DFT
+  &PRINT
+    &FORCES ON
+    &END FORCES
+  &END PRINT
+&END FORCE_EVAL
+```
+
+- To transform MO's to dalton format we run the transfomMOs.py script.
 
 transformMOS.py:
 ```python
@@ -308,7 +392,9 @@ transformMOS.py:
 ```
 
 We then run LSDALTON with the following input to calculate the molecular
-orbitals (LSDALTON.INP)
+orbitals 
+```python
+>> ~cat LSDALTON.INP  # LSDALTON input
 
 ```
  **WAVE FUNCTION
@@ -319,3 +405,4 @@ orbitals (LSDALTON.INP)
  .Only Loc
  *END OF INPUT
 ```
+The result is the file 
