@@ -184,7 +184,6 @@ Print to DALTON input file.
 ```
 ```
  Reading binary file Ne_bulk2-RESTART.wfn.
- [10, 10, 11, 20]
  Writing binary file orbitals_in.u.
 ```
 
