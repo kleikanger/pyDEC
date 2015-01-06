@@ -301,8 +301,7 @@ We look at the system (MOLECULE.INP):
    CP2K simulation.
 -  To transform MO's to dalton format we run the transfomMOs.py script.
 
-cat transformMOS.py:
-
+transformMOS.py:
 ```python
  import sys
  sys.path.append('/Users/leik/Dropbox/phd/pyCode/pyDEC/')
