@@ -1,7 +1,7 @@
 '''
 @file Contains a class that reads/writes basisfiles in both CP2K/DALTON format.
-@brief Read basis file, store basis info and generate basis input to CP2K or
-DALTON
+@brief Read basis file, store basis info and generate basis input to CP2K or \
+    DALTON
 @date 2014
 @author Karl R. Leikanger.
 
@@ -29,7 +29,6 @@ class BasisSet():
     chem_elems = ''
     chem_elems_indx = ''
     basis_name = ''
-    infile_name = ''
 
     def __init__(self, basis_name):
         '''
@@ -80,14 +79,12 @@ class BasisSet():
         @date 2014
         @author Karl R. Leikanger.
         '''
-        self.infile_name = infile_name
-
         options = {
             'dalton': self.__read_dalton_basisfile,
             'lsdalton': self.__read_dalton_basisfile
         }
         try:
-            options[basis_format.lower()]()
+            options[basis_format.lower()](infile_name)
         except:
             print('Error: Basis input format <%s> not supported?'
                   % basis_format)
@@ -242,15 +239,16 @@ class BasisSet():
         self.chem_elems_indx = \
             dict(zip(sorted(elemset), range(len(elemset))))
 
-    def __read_dalton_basisfile(self):
+    def __read_dalton_basisfile(self, infile_name):
         '''
         @brief Read a basis input file.
         @date 2014
+        @paran infile_name Name of basis input file.
         @author Karl R. Leikanger.
         '''
-        print('Reading basis from:', self.infile_name)
+        print('Reading basis from:', infile_name)
         cmarkers = ['!', '$']
-        get_words = ReadFile(self.infile_name, cmarkers).get_words_of_line
+        get_words = ReadFile(infile_name, cmarkers).get_words_of_line
 
         l = -1
         elem = ''

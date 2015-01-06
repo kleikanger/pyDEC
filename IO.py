@@ -22,22 +22,19 @@ class FortranIO():
     compilers use four bytes. buf_type must have the same type as the
     buffer.
     '''
-    _int_type = ''
-    _double_type = ''
     _buf_type = ''
+    _types = ''
     _f = ''
 
-    def __init__(self, int_type, double_type, filename, ds):
+    def __init__(self, buf_type, filename, ds):
         '''
-        @param int_type numpy.int<xx>
-        @param double_type numpy.double<xx>
+        @param buf_type numpy.int<xx>
         @param ds String 'rb', 'wb' for call to open.
         @date 2014
         @author Karl R. Leikanger.
         '''
-        self._int_type = int_type
-        self._double_type = double_type
-        self._buf_type = int_type
+        self._types = dict()
+        self._buf_type = buf_type
 
         try:
             self._f = open(filename, ds)
@@ -63,15 +60,22 @@ class FortranIO():
         @date 2014
         @author Karl R. Leikanger.
         '''
-        options = {
-            'INT': self._int_type,
-            'DOUBLE': self._double_type
-        }
         try:
-            return options[datatype]
+            return self._types[datatype]
         except:
             print('Error: Datatype %s not available?' % datatype)
             raise
+
+    def add_type(self, name, dtype):
+        '''
+        @brief Add {name: type} to dict _types.
+        @param name Name of type.
+        @return dtype Data type.
+        @date 2014
+        @author Karl R. Leikanger.
+        '''
+        self._types.update({name: dtype})
+
 
 
 class ReadFortranBinaryFile(FortranIO):
@@ -81,15 +85,14 @@ class ReadFortranBinaryFile(FortranIO):
     @author Karl R. Leikanger.
     '''
 
-    def __init__(self, int_type, double_type, filename):
+    def __init__(self, buf_type, filename):
         '''
         @date 2014
         @author Karl R. Leikanger.
         '''
-        super().__init__(int_type, double_type, filename, 'rb')
+        super().__init__(buf_type, filename, 'rb')
         # FortranIO.__init__(self, int_type, double_type, filename, 'rb')
-        print('Reading binary file %s assuming %iB integer and %iB float.'
-              % (filename, int_type(0).nbytes, double_type(0).nbytes))
+        print('Reading binary file %s.' % filename)
 
     def read_record(self, datatype, nread):
         '''
@@ -124,14 +127,14 @@ class WriteFortranBinaryFile(FortranIO):
     @author Karl R. Leikanger.
     '''
 
-    def __init__(self, int_type, double_type, filename):
+    def __init__(self, buf_type, filename):
         '''
         @date 2014
         @author Karl R. Leikanger.
         '''
-        super().__init__(int_type, double_type, filename, 'wb')
-        print('Writing binary file %s assuming %iB integer and %iB float.'
-              % (filename, int_type(0).nbytes, double_type(0).nbytes))
+        super().__init__(buf_type, filename, 'wb')
+        # FortranIO.__init__(self, int_type, double_type, filename, 'wb')
+        print('Writing binary file %s.' % filename)
 
     def write_record(self, datatype_str, output, buf=True):
         '''
@@ -144,19 +147,34 @@ class WriteFortranBinaryFile(FortranIO):
         '''
         datatype = self._get_dtype(datatype_str)
 
-        if type(output) == np.ndarray and output.dtype != datatype:
+        if type(output) == np.ndarray and output.dtype.type != datatype:
             output = output.astype(dtype=datatype)
         else:
             output = np.asarray(output, dtype=datatype)
 
+        if output.ndim == 0:
+            output = output.reshape(1)
+
         if buf:
             buf_type = self._buf_type
             buf = buf_type(output.nbytes)
-            buf.tofile(self._f)
-            output.tofile(self._f)
-            buf.tofile(self._f)
+
+            self._f.write(buf)
+            #buf.tofile(self._f)
+            for o in output:
+                self._f.write(o)
+            # output.tofile(self._f)
+            self._f.write(buf)
+            #buf.tofile(self._f)
+
+            print(buf)
+            print(output)
+            print(buf)
         else:
-            output.tofile(self._f)
+            for o in output:
+                self._f.write(o)
+            # output.tofile(self._f)
+            print(output)
 
 
 class ReadFile():

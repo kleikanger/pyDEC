@@ -1,4 +1,6 @@
-# see CP2K cp_fm_types.F
+'''
+Class that handles MOs.
+'''
 import IO
 
 try:
@@ -15,11 +17,15 @@ except:
 @author Karl R. Leikanger.
 '''
 
-
-class MOinfo():
+class MOs():
     '''
     @brief
-    @param
+    @var filename
+    @var ...
+    @var ...
+    @var ...
+    @var ...
+    @var ...
     @date 2014
     @author Karl R. Leikanger.
     '''
@@ -27,51 +33,43 @@ class MOinfo():
     filename = ''
     int_type = ''
     double_type = ''
-    rt_mos = ''         # TODO should be input
+    long_type = ''
+    rt_mos = ''  # TODO should be input
     i_nmo = 9999999999  # =i_ao # TODO should be input ?
     # set from basis_set : sum of max(ao.tag) for all elem/ basis sets.
 
-    '''
-    basis_name = ''
-    nspin = 0
-    nshell = []
-    l = []
-    nshell_info = []
-    nso_info = []
 
-    ...
-    '''
-
-    def __init__(self, filename, rt_mos=False,
-                 int_type=np.int32, double_type=np.float64):
+    def __init__(self, filename, system, basis, rt_mos=False,
+                 int_type=np.int32, long_type=np.int64, double_type=np.float64):
         '''
         @brief The constructor also reads the CP2K datafile (filename)
         @brief and loads the data from the CP2K simulation.
+        @param system xxx
+        @param basis xxx
         @param
         @date 2014
         @author Karl R. Leikanger.
         '''
+        self.system = system
+        self.basis = basis
         self.rt_mos = rt_mos
         self.filename = filename
         self.int_type = int_type
+        self.long_type = long_type
         self.double_type = double_type
 
-    def read_restart_file_cp2k_format(self, system, basis):  # convert_mo_format
+    def transform_cp2k_to_dalton(self):
         '''
         @brief Load CP2K input file.
-        @param system xxx
-        @param basis xxx
         @date 2014
         @author Karl R. Leikanger.
 
         See CP2K:qs_mo_io:read_mos_restart_low
-
-        For this routine to work, must the dimension <number of ao's>
-        be the same in both simulations ??
         '''
-        read_record = IO.ReadFortranBinaryFile(
-            self.int_type, self.double_type, self.filename
-        ).read_record
+        rfbf_obj = IO.ReadFortranBinaryFile(self.int_type, self.filename)
+        rfbf_obj.add_type('INT', self.int_type)
+        rfbf_obj.add_type('DOUBLE', self.double_type)
+        read_record = rfbf_obj.read_record
 
         # Read general info.
         [i_natom, i_nspin, i_nao, i_nsetmax, i_nshellmax]\
@@ -90,6 +88,7 @@ class MOinfo():
             # IF (para_env%ionode.AND.(nmo > 0)) THEN
             [i_nmo_read, i_homo, i_lfomo, i_nelectron] =\
                 read_record('INT', 4)
+            print([i_nmo_read, i_homo, i_lfomo, i_nelectron])
 
             # TODO This might not be neccessary. Check LSDALTON/CP2K source.
             # But note that in LSDALTON it is assured that the allocated matrix
@@ -105,7 +104,6 @@ class MOinfo():
                       The read MO set will be truncated!')
             #
             # Various tests to check that nmo > i_homo etc.
-            # ...
             #
 
             # Read and pad if i_nmo_read>i_nmo
@@ -120,20 +118,22 @@ class MOinfo():
             # XXX these variables (dd_eig, dd_occ) are not used.
 
             permutations =\
-                basis.get_mo_transformation('CP2K', 'DALTON', system.atoms)
+                self.basis.get_mo_transformation('CP2K', 'DALTON', self.system.atoms)
 
             # open output filestream
-            ostream = IO.WriteFortranBinaryFile(
-                self.int_type, self.double_type, 'orbitals_in.u'
-            )
+            ostream = IO.WriteFortranBinaryFile(self.int_type, 'orbitals_in.u')
+            ostream.add_type('INT', self.int_type)
+            ostream.add_type('LONG', self.long_type)
+            ostream.add_type('DOUBLE', self.double_type)
 
             nrow = i_nao
             ncol = i_nmo
 
-            ostream.write_record('INT', [i_nao, self.i_nmo])
+            ostream.write_record('LONG', [i_nao, i_nmo_read]) #self.i_nom
             # Buffer: start of MO - matrix. Enables us to write
             # MO's one line at a time.
-            ostream.write_record('INT', nrow*ncol, buf=False)
+            nbuf = nrow*ncol*self.double_type(0).nbytes
+            ostream.write_record('INT', nbuf, buf=False)
 
             if self.rt_mos:  # unres or res??
                 print('Error ReadMOsFromFile: Support for unrestricted MOs\
@@ -151,7 +151,6 @@ class MOinfo():
 
                     # NB: this is a numpy matrix.
                     dd_vecbuff = read_record('DOUBLE', i_nao)
-                    #print(dd_vecbuff)
                     #dd_vecbuff = [dd_vecbuff[j] for j in permutations]
                     dd_vecbuff = dd_vecbuff[permutations]
                     #print(dd_vecbuff)
@@ -176,7 +175,7 @@ class MOinfo():
             # XXX Use above when self.i_nmo is set to the correct value.
 
             # Buffer: end of MO - matrix.
-            ostream.write_record('INT', nrow*ncol, buf=False)
+            ostream.write_record('INT', nbuf, buf=False)
 
 
 
