@@ -224,8 +224,7 @@ found by calling:
     [0, 1]
 
 
-Example with several basis sets:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##Example with several basis sets:
 
 We use different basis sets for the atoms.
 
