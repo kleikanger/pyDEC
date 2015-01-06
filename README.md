@@ -137,14 +137,13 @@ H     -0.50000000000      0.0000000000     0.0000000000
 a1 = 2.0 0.0 0.0 active
 a2 = 0.0 2.0 0.0 inactive
 a3 = 0.0 0.0 2.0 inactive
-'''
-
-'''python
-from System import System
-s = System()
-s.read_system_info('H2.mol', 'LSDALTON')
 ```
 
+```python
+>> from System import System
+>> s = System()
+>> s.read_system_info('H2.mol', 'LSDALTON')
+```
 ```
 Reading DALTON .mol file: H2.mol
 ```
@@ -179,12 +178,10 @@ class MOs: - Read MO's from CP2K file. - Permute to DALTON format. -
 Print to DALTON input file.
 
 ```python
- from MOs import MOs
- # o = MOinfo('He_bulk2-RESTART.wfn')
- o = MOs('Ne_bulk2-RESTART.wfn', s, basis)  # inp: input file (CP2K restart file)
- o.transform_cp2k_to_dalton()
+>> from MOs import MOs
+>> o = MOs('Ne_bulk2-RESTART.wfn', s, basis)  # inp: input file (CP2K restart file)
+>> o.transform_cp2k_to_dalton()
 ```
-
 ```
  Reading binary file Ne_bulk2-RESTART.wfn.
  [10, 10, 11, 20]
@@ -195,12 +192,10 @@ The MO coefficients are read from file permuted to dalton order and
 written to orbitals\_in.u. The permutations of the coefficients are
 found by calling:
 
-python
+```python
+>> perm = basis.get_mo_transformation('CP2K', 'DALTON', s.atoms)  # inp: format from, format to, __Atom objects
+>> print(perm)
 ```
- perm = basis.get_mo_transformation('CP2K', 'DALTON', s.atoms)  # inp: format from, format to, __Atom objects
- print(perm)
-```
-
 ```
     [0, 1]
 ```
@@ -210,9 +205,8 @@ python
 We use different basis sets for the atoms.
 
 ```python
- !cat N2.mol
+>> !cat N2.mol
 ```
-
 ```
  ATOMBASIS
  LDA molecular hessian without symmetry
@@ -231,17 +225,17 @@ We use different basis sets for the atoms.
 Load the .mol file and the basis sets.
 
 ```python
- systemN2 = System()
- systemN2.read_system_info('N2.mol', 'LSDALTON')
+>> systemN2 = System()
+>> systemN2.read_system_info('N2.mol', 'LSDALTON')
 ```
 ```
  Reading DALTON .mol file: N2.mol
 ```
 
 ```python
- basisN2 = Basis()
- basisN2.read_basis_set('aug-cc-pVTZ', 'aug-cc-pVTZ', 'DALTON')
- basisN2.read_basis_set('STO-6G', 'STO-6G', 'DALTON')
+>> basisN2 = Basis()
+>> basisN2.read_basis_set('aug-cc-pVTZ', 'aug-cc-pVTZ', 'DALTON')
+>> basisN2.read_basis_set('STO-6G', 'STO-6G', 'DALTON')
 ```
 ```
  Reading basis from: aug-cc-pVTZ
@@ -251,9 +245,8 @@ Load the .mol file and the basis sets.
 The permutations from CP2K to DALTON MOs:
 
 ```python
- print(basisN2.get_mo_transformation('CP2K', 'DALTON', systemN2.atoms))
+>> print(basisN2.get_mo_transformation('CP2K', 'DALTON', systemN2.atoms))
 ```
-
 ```
  [44, 45, 35, 7, 3, 43, 41, 42, 27, 25, 26, 6, 4, 5, 2, 0, 1, 36, 37, 38, 39, 40, 20, 21, 22, 23, 24, 8, 9, 10, 11, 12, 28, 29, 30, 31, 32, 33, 34, 13, 14, 15, 16, 17, 18, 19, 50, 46, 49, 47, 48]
 ```
