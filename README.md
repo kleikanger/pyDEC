@@ -406,4 +406,4 @@ transformMOS.py:
  .Only Loc
  *END OF INPUT
 ```
-The result is the file 
+The result is the file localized_orbitals.u 
