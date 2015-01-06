@@ -30,9 +30,9 @@ Functionality
    -  DALTON
    -  CP2K (not implemented)
 
-'''python
+.. code:: python
     cd ~/Dropbox/phd/pyCode/pyDEC/
-'''
+
 .. parsed-literal::
 
     /Users/leik/Dropbox/phd/pyCode/pyDEC
@@ -59,16 +59,14 @@ Example: Basis STO-6G from DALTON to CP2K format.
 The basis sets 'STO-3G' and 'STO-6G' is now stored in the Basis object
 in a list of BasisSet objects. In the next line we write to file.
 
-.. code:: python
-
+```python
     basis.print_basis_sets('STO_3G+STO_6G', 'CP2K')  # inp: output filename, format
-
-.. parsed-literal::
-
+```
+```
     Writing basis sets to file <STO_3G+STO_6G> in <CP2K> format.
     Basis set <STO-3G> written to file.
     Basis set <STO-6G> written to file.
-
+```
 
 .. code:: python
 
