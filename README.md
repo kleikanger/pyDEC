@@ -303,7 +303,7 @@ We look at the system (MOLECULE.INP):
 
 cat transformMOS.py:
 
-'''python
+```python
  import sys
  sys.path.append('/Users/leik/Dropbox/phd/pyCode/pyDEC/')
  from MOs import MOs
